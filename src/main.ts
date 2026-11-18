@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFolder, normalizePath } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFolder, normalizePath, requireApiVersion } from 'obsidian';
 import { DARK_BG, EXT, PenCanvasView, VIEW_TYPE } from './view';
 import { DEFAULT_SETTINGS, PenSettings } from './types';
 import { emptyDoc, serialize } from './geometry';
@@ -138,7 +138,7 @@ class PenCanvasSettingTab extends PluginSettingTab {
 
 	getControlValue(key: string): unknown { return (this.plugin.settings as unknown as Record<string, unknown>)[key]; }
 
-	setControlValue(key: string, value: unknown): void { if (this.apply(key, value)) this.update(); }
+	setControlValue(key: string, value: unknown): void { if (this.apply(key, value) && requireApiVersion('1.13.0')) this.update(); }
 
 	// Obsidian older than 1.13: imperative fallback with the same rows.
 	display(): void { this.build(); }

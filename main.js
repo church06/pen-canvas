@@ -3586,7 +3586,7 @@ var PenCanvasSettingTab = class extends import_obsidian3.PluginSettingTab {
     return this.plugin.settings[key];
   }
   setControlValue(key, value) {
-    if (this.apply(key, value)) this.update();
+    if (this.apply(key, value) && (0, import_obsidian3.requireApiVersion)("1.13.0")) this.update();
   }
   // Obsidian older than 1.13: imperative fallback with the same rows.
   display() {
