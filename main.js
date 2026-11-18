@@ -3514,76 +3514,103 @@ var PenCanvasPlugin = class extends import_obsidian3.Plugin {
     await this.saveData(this.settings);
   }
 };
+function rows() {
+  return [
+    { key: "leftHand", name: tr("\u5DE6\u624B\u6A21\u5F0F", "Left-hand mode"), desc: tr("\u5706\u76D8\u5185\u5708\u7684\u6309\u952E\u5DE6\u53F3\u955C\u50CF\uFF08\u4F4D\u7F6E\u548C\u5916\u5708\u6ED1\u6761\u4E0D\u53D8\uFF09\u3002\u4E5F\u53EF\u4EE5\u5728\u5706\u76D8\u201C\xB7\xB7\xB7\u201D\u83DC\u5355\u91CC\u5207\u6362\u3002", `Mirrors the keys of the disc menu left to right (its position and the outer sliders stay). Also in the disc's "\xB7\xB7\xB7" menu.`) },
+    { key: "penOnly", name: tr("\u53EA\u7528\u7B14\u753B\u753B", "Draw with pen only"), desc: tr("\u5F00\u542F\u540E\u624B\u6307\u53EA\u7528\u6765\u5E73\u79FB/\u7F29\u653E\uFF0C\u7B14\u624D\u753B\u753B\uFF08\u9632\u8BEF\u89E6\uFF09\u3002", "Fingers only pan and zoom; only the pen draws (avoids accidental marks).") },
+    { key: "thinning", name: tr("\u538B\u611F\u53D8\u7EC6\u7A0B\u5EA6 (thinning)", "Pressure thinning"), desc: tr("0 = \u4E0D\u53D7\u538B\u529B\u5F71\u54CD\uFF0C1 = \u53D8\u5316\u6700\u5927\u3002", "0 = width ignores pressure, 1 = strongest effect."), slider: [0, 1, 0.05] },
+    { key: "pressureGamma", name: tr("\u538B\u611F\u66F2\u7EBF", "Pressure curve"), desc: tr("<1 \u8F7B\u538B\u5C31\u7C97\uFF0C>1 \u8981\u7528\u529B\u624D\u7C97\u3002", "Below 1: light pressure already gives thick lines. Above 1: press harder for thick lines."), slider: [0.3, 2.5, 0.05] },
+    { key: "smoothing", name: tr("\u8F6E\u5ED3\u5E73\u6ED1 (smoothing)", "Edge smoothing"), slider: [0, 1, 0.05] },
+    { key: "streamline", name: tr("\u9632\u6296 (streamline)", "Stabilizer (streamline)"), desc: tr("\u8D8A\u5927\u8D8A\u987A\uFF0C\u4F46\u7B14\u8FF9\u4F1A\u66F4\u660E\u663E\u5730\u843D\u540E\u7B14\u5C16\u3002", "Higher is smoother, but the line trails further behind the pen tip."), slider: [0, 0.9, 0.05] },
+    { key: "prediction", name: tr("\u7B14\u5C16\u9884\u6D4B", "Pen tip prediction"), desc: tr("\u7528 getPredictedEvents \u63D0\u524D\u753B\u4E00\u5C0F\u6BB5\uFF0C\u51CF\u5C11\u89C6\u89C9\u5EF6\u8FDF\uFF1B\u62AC\u7B14\u540E\u9884\u6D4B\u90E8\u5206\u88AB\u4E22\u5F03\u3002", "Draws a short predicted piece ahead of the pen (getPredictedEvents) to hide latency. The prediction is dropped when you lift the pen.") },
+    { key: "desynchronized", name: tr("\u4F4E\u5EF6\u8FDF\u753B\u5E03 (desynchronized)", "Low-latency canvas (desynchronized)"), desc: tr("\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\u3002\u82E5\u51FA\u73B0\u6495\u88C2\u6216\u95EA\u70C1\u53EF\u5173\u95ED\u3002", "Applies after reopening the canvas. Turn off if you see tearing or flicker.") },
+    { key: "snap", name: tr("\u5BF9\u9F50\u5438\u9644", "Snapping"), desc: tr("\u753B\u5F62\u72B6\u3001\u79FB\u52A8\u9009\u4E2D\u5185\u5BB9\u65F6\uFF0C\u5438\u9644\u5230\u5176\u4ED6\u5F62\u72B6\u7684\u8FB9\u548C\u4E2D\u7EBF\u5E76\u663E\u793A\u53C2\u8003\u7EBF\uFF08\u624B\u5199\u7B14\u753B\u4E0D\u53C2\u4E0E\uFF09\u3002\u62D6\u692D\u5706/\u77E9\u5F62\u65F6\u4F1A\u5728 1:1\u30014:3\u30012:1 \u7B49\u6BD4\u4F8B\u505C\u4E00\u4E0B\uFF0C\u76F4\u7EBF/\u7BAD\u5934\u5728 45\xB0 \u500D\u6570\u505C\u4E00\u4E0B\u3002", "When drawing shapes or moving a selection, snap to the edges and centre lines of other shapes and show guides (handwriting is ignored). Ellipses and rectangles pause at 1:1, 4:3, 2:1 and similar ratios; lines and arrows at multiples of 45\xB0.") },
+    { key: "fillGap", name: tr("\u586B\u5145\u5C01\u53E3\u95F4\u9699\uFF08\u50CF\u7D20\uFF09", "Fill gap tolerance (px)"), desc: tr("\u7EBF\u6761\u4E4B\u95F4\u5C0F\u4E8E\u8FD9\u4E2A\u8DDD\u79BB\u7684\u7F3A\u53E3\uFF0C\u586B\u5145\u65F6\u5F53\u4F5C\u5C01\u95ED\u30020 = \u5FC5\u987B\u5B8C\u5168\u5C01\u53E3\u3002", "Gaps between lines smaller than this count as closed when filling. 0 = the area must be fully closed."), slider: [0, 20, 1] },
+    { key: "glFill", name: tr("GPU \u6E32\u67D3\u586B\u5145 (WebGL)", "GPU fills (WebGL)"), desc: tr("\u586B\u5145\u7528\u663E\u5361\u7ED8\u5236\uFF0C\u5927\u91CF\u56FE\u6848\u586B\u5145\u65F6\u66F4\u6D41\u7545\u3001\u653E\u5927\u4E0D\u7CCA\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF1B\u82E5\u663E\u793A\u5F02\u5E38\u53EF\u5173\u95ED\uFF0C\u6539\u56DE\u539F\u6765\u7684\u65B9\u5F0F\u3002", "Draws fills on the GPU: smoother with many pattern fills and sharp when zoomed. Applies after reopening the canvas; turn off if fills look wrong.") }
+  ];
+}
+var langName = () => tr("\u754C\u9762\u8BED\u8A00", "Language");
+var langDesc = () => tr("\u9ED8\u8BA4\u8DDF\u968F Obsidian \u7684\u8BED\u8A00\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF08\u547D\u4EE4\u540D\u8981\u91CD\u542F Obsidian\uFF09\u3002", "Follows Obsidian's language by default. Applies to canvases opened afterwards (command names after restarting Obsidian).");
+var langOptions = () => ({ auto: tr("\u8DDF\u968F Obsidian", "Follow Obsidian"), zh: "\u4E2D\u6587", en: "English" });
+var noteName = () => tr("\u7B14\u8FF9\u53C2\u6570\u53EA\u5F71\u54CD\u4E4B\u540E\u753B\u7684\u65B0\u7B14\u753B", "Stroke settings only affect new strokes");
+var noteDesc = () => tr("\u65E7\u7B14\u753B\u6309\u5404\u81EA\u4FDD\u5B58\u7684\u53C2\u6570\u6E32\u67D3\uFF0C\u6240\u4EE5\u5728\u7535\u8111\u548C\u5E73\u677F\u4E0A\u770B\u8D77\u6765\u4E00\u81F4\u3002", "Existing strokes keep the settings they were drawn with, so they look the same on every device.");
+var bgName = () => tr("\u65B0\u753B\u5E03\u9ED8\u8BA4\u80CC\u666F\u8272", "Default background for new canvases");
+var bgDesc = () => tr("\u9ED8\u8BA4\u8DDF\u968F\u4E3B\u9898\uFF08\u6697\u8272\u4E3B\u9898\u9ED1\u5E95\u3001\u4EAE\u8272\u4E3B\u9898\u767D\u5E95\uFF09\uFF1B\u5728\u753B\u5E03\u91CC\u9009\u8FC7\u80CC\u666F\u8272\u540E\u4F1A\u8BB0\u4F4F\u4E0A\u6B21\u7684\u9009\u62E9\u3002", "Follows the theme by default (dark theme: black, light theme: white). Once you pick a background in a canvas, that choice is remembered.");
 var PenCanvasSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
+  /** Writes one setting and its side effects; shared by both settings UIs. Returns true when the tab must be rebuilt. */
+  apply(key, value) {
+    const s2 = this.plugin.settings;
+    if (key === "leftHand") {
+      void this.plugin.setLeftHand(value === true);
+      return false;
+    }
+    s2[key] = value;
+    if (key === "lang") setLang(s2.lang);
+    void this.plugin.saveSettings();
+    return key === "lang";
+  }
+  background(setting) {
+    const s2 = this.plugin.settings;
+    setting.addColorPicker((c2) => {
+      c2.setValue(this.plugin.newBackground()).onChange((v2) => {
+        s2.defaultBackground = v2;
+        s2.bgChosen = true;
+        void this.plugin.saveSettings();
+      });
+      setting.addExtraButton((b2) => b2.setIcon("rotate-ccw").setTooltip(tr("\u6062\u590D\u8DDF\u968F\u4E3B\u9898", "Follow the theme again")).onClick(() => {
+        s2.bgChosen = false;
+        void this.plugin.saveSettings();
+        c2.setValue(this.plugin.newBackground());
+      }));
+    });
+  }
+  // Obsidian 1.13 and later: declarative settings (also indexed by the settings search).
+  getSettingDefinitions() {
+    const stroke = rows().map((r2) => ({
+      name: r2.name,
+      desc: r2.desc,
+      control: r2.slider ? { type: "slider", key: r2.key, min: r2.slider[0], max: r2.slider[1], step: r2.slider[2] } : { type: "toggle", key: r2.key }
+    }));
+    return [
+      { name: langName(), desc: langDesc(), control: { type: "dropdown", key: "lang", options: langOptions() } },
+      { name: noteName(), desc: noteDesc(), searchable: false },
+      ...stroke,
+      { name: bgName(), desc: bgDesc(), render: (setting) => this.background(setting) }
+    ];
+  }
+  getControlValue(key) {
+    return this.plugin.settings[key];
+  }
+  setControlValue(key, value) {
+    if (this.apply(key, value)) this.update();
+  }
+  // Obsidian older than 1.13: imperative fallback with the same rows.
   display() {
+    this.build();
+  }
+  build() {
     const { containerEl } = this;
     containerEl.empty();
     const s2 = this.plugin.settings;
-    const save = () => {
-      void this.plugin.saveSettings();
-    };
-    new import_obsidian3.Setting(containerEl).setName(tr("\u754C\u9762\u8BED\u8A00", "Language")).setDesc(tr("\u9ED8\u8BA4\u8DDF\u968F Obsidian \u7684\u8BED\u8A00\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF08\u547D\u4EE4\u540D\u8981\u91CD\u542F Obsidian\uFF09\u3002", "Follows Obsidian's language by default. Applies to canvases opened afterwards (command names after restarting Obsidian).")).addDropdown((d2) => d2.addOption("auto", tr("\u8DDF\u968F Obsidian", "Follow Obsidian")).addOption("zh", "\u4E2D\u6587").addOption("en", "English").setValue(s2.lang).onChange((v2) => {
-      s2.lang = v2;
-      setLang(s2.lang);
-      save();
-      this.display();
+    new import_obsidian3.Setting(containerEl).setName(langName()).setDesc(langDesc()).addDropdown((d2) => d2.addOptions(langOptions()).setValue(this.plugin.settings.lang).onChange((v2) => {
+      if (this.apply("lang", v2)) this.build();
     }));
-    containerEl.createEl("p", { text: tr("\u7B14\u8FF9\u53C2\u6570\u53EA\u5F71\u54CD\u4E4B\u540E\u753B\u7684\u65B0\u7B14\u753B\uFF1B\u65E7\u7B14\u753B\u6309\u5404\u81EA\u4FDD\u5B58\u7684\u53C2\u6570\u6E32\u67D3\uFF0C\u6240\u4EE5\u5728\u7535\u8111\u548C\u5E73\u677F\u4E0A\u770B\u8D77\u6765\u4E00\u81F4\u3002", "Stroke settings only affect new strokes. Existing strokes keep the settings they were drawn with, so they look the same on every device.") });
-    new import_obsidian3.Setting(containerEl).setName(tr("\u5DE6\u624B\u6A21\u5F0F", "Left-hand mode")).setDesc(tr("\u5706\u76D8\u5185\u5708\u7684\u6309\u952E\u5DE6\u53F3\u955C\u50CF\uFF08\u4F4D\u7F6E\u548C\u5916\u5708\u6ED1\u6761\u4E0D\u53D8\uFF09\u3002\u4E5F\u53EF\u4EE5\u5728\u5706\u76D8\u201C\xB7\xB7\xB7\u201D\u83DC\u5355\u91CC\u5207\u6362\u3002", `Mirrors the keys of the disc menu left to right (its position and the outer sliders stay). Also in the disc's "\xB7\xB7\xB7" menu.`)).addToggle((t2) => t2.setValue(s2.leftHand).onChange((v2) => {
-      void this.plugin.setLeftHand(v2);
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u53EA\u7528\u7B14\u753B\u753B", "Draw with pen only")).setDesc(tr("\u5F00\u542F\u540E\u624B\u6307\u53EA\u7528\u6765\u5E73\u79FB/\u7F29\u653E\uFF0C\u7B14\u624D\u753B\u753B\uFF08\u9632\u8BEF\u89E6\uFF09\u3002", "Fingers only pan and zoom; only the pen draws (avoids accidental marks).")).addToggle((t2) => t2.setValue(s2.penOnly).onChange((v2) => {
-      s2.penOnly = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u538B\u611F\u53D8\u7EC6\u7A0B\u5EA6 (thinning)", "Pressure thinning")).setDesc(tr("0 = \u4E0D\u53D7\u538B\u529B\u5F71\u54CD\uFF0C1 = \u53D8\u5316\u6700\u5927\u3002", "0 = width ignores pressure, 1 = strongest effect.")).addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(s2.thinning).onChange((v2) => {
-      s2.thinning = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u538B\u611F\u66F2\u7EBF", "Pressure curve")).setDesc(tr("<1 \u8F7B\u538B\u5C31\u7C97\uFF0C>1 \u8981\u7528\u529B\u624D\u7C97\u3002", "Below 1: light pressure already gives thick lines. Above 1: press harder for thick lines.")).addSlider((sl) => sl.setLimits(0.3, 2.5, 0.05).setValue(s2.pressureGamma).onChange((v2) => {
-      s2.pressureGamma = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u8F6E\u5ED3\u5E73\u6ED1 (smoothing)", "Edge smoothing")).addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(s2.smoothing).onChange((v2) => {
-      s2.smoothing = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u9632\u6296 (streamline)", "Stabilizer (streamline)")).setDesc(tr("\u8D8A\u5927\u8D8A\u987A\uFF0C\u4F46\u7B14\u8FF9\u4F1A\u66F4\u660E\u663E\u5730\u843D\u540E\u7B14\u5C16\u3002", "Higher is smoother, but the line trails further behind the pen tip.")).addSlider((sl) => sl.setLimits(0, 0.9, 0.05).setValue(s2.streamline).onChange((v2) => {
-      s2.streamline = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u7B14\u5C16\u9884\u6D4B", "Pen tip prediction")).setDesc(tr("\u7528 getPredictedEvents \u63D0\u524D\u753B\u4E00\u5C0F\u6BB5\uFF0C\u51CF\u5C11\u89C6\u89C9\u5EF6\u8FDF\uFF1B\u62AC\u7B14\u540E\u9884\u6D4B\u90E8\u5206\u88AB\u4E22\u5F03\u3002", "Draws a short predicted piece ahead of the pen (getPredictedEvents) to hide latency. The prediction is dropped when you lift the pen.")).addToggle((t2) => t2.setValue(s2.prediction).onChange((v2) => {
-      s2.prediction = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u4F4E\u5EF6\u8FDF\u753B\u5E03 (desynchronized)", "Low-latency canvas (desynchronized)")).setDesc(tr("\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\u3002\u82E5\u51FA\u73B0\u6495\u88C2\u6216\u95EA\u70C1\u53EF\u5173\u95ED\u3002", "Applies after reopening the canvas. Turn off if you see tearing or flicker.")).addToggle((t2) => t2.setValue(s2.desynchronized).onChange((v2) => {
-      s2.desynchronized = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u5BF9\u9F50\u5438\u9644", "Snapping")).setDesc(tr("\u753B\u5F62\u72B6\u3001\u79FB\u52A8\u9009\u4E2D\u5185\u5BB9\u65F6\uFF0C\u5438\u9644\u5230\u5176\u4ED6\u5F62\u72B6\u7684\u8FB9\u548C\u4E2D\u7EBF\u5E76\u663E\u793A\u53C2\u8003\u7EBF\uFF08\u624B\u5199\u7B14\u753B\u4E0D\u53C2\u4E0E\uFF09\u3002\u62D6\u692D\u5706/\u77E9\u5F62\u65F6\u4F1A\u5728 1:1\u30014:3\u30012:1 \u7B49\u6BD4\u4F8B\u505C\u4E00\u4E0B\uFF0C\u76F4\u7EBF/\u7BAD\u5934\u5728 45\xB0 \u500D\u6570\u505C\u4E00\u4E0B\u3002", "When drawing shapes or moving a selection, snap to the edges and centre lines of other shapes and show guides (handwriting is ignored). Ellipses and rectangles pause at 1:1, 4:3, 2:1 and similar ratios; lines and arrows at multiples of 45\xB0.")).addToggle((t2) => t2.setValue(s2.snap).onChange((v2) => {
-      s2.snap = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u586B\u5145\u5C01\u53E3\u95F4\u9699\uFF08\u50CF\u7D20\uFF09", "Fill gap tolerance (px)")).setDesc(tr("\u7EBF\u6761\u4E4B\u95F4\u5C0F\u4E8E\u8FD9\u4E2A\u8DDD\u79BB\u7684\u7F3A\u53E3\uFF0C\u586B\u5145\u65F6\u5F53\u4F5C\u5C01\u95ED\u30020 = \u5FC5\u987B\u5B8C\u5168\u5C01\u53E3\u3002", "Gaps between lines smaller than this count as closed when filling. 0 = the area must be fully closed.")).addSlider((sl) => sl.setLimits(0, 20, 1).setValue(s2.fillGap).onChange((v2) => {
-      s2.fillGap = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("GPU \u6E32\u67D3\u586B\u5145 (WebGL)", "GPU fills (WebGL)")).setDesc(tr("\u586B\u5145\u7528\u663E\u5361\u7ED8\u5236\uFF0C\u5927\u91CF\u56FE\u6848\u586B\u5145\u65F6\u66F4\u6D41\u7545\u3001\u653E\u5927\u4E0D\u7CCA\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF1B\u82E5\u663E\u793A\u5F02\u5E38\u53EF\u5173\u95ED\uFF0C\u6539\u56DE\u539F\u6765\u7684\u65B9\u5F0F\u3002", "Draws fills on the GPU: smoother with many pattern fills and sharp when zoomed. Applies after reopening the canvas; turn off if fills look wrong.")).addToggle((t2) => t2.setValue(s2.glFill).onChange((v2) => {
-      s2.glFill = v2;
-      save();
-    }));
-    new import_obsidian3.Setting(containerEl).setName(tr("\u65B0\u753B\u5E03\u9ED8\u8BA4\u80CC\u666F\u8272", "Default background for new canvases")).setDesc(tr("\u9ED8\u8BA4\u8DDF\u968F\u4E3B\u9898\uFF08\u6697\u8272\u4E3B\u9898\u9ED1\u5E95\u3001\u4EAE\u8272\u4E3B\u9898\u767D\u5E95\uFF09\uFF1B\u5728\u753B\u5E03\u91CC\u9009\u8FC7\u80CC\u666F\u8272\u540E\u4F1A\u8BB0\u4F4F\u4E0A\u6B21\u7684\u9009\u62E9\u3002", "Follows the theme by default (dark theme: black, light theme: white). Once you pick a background in a canvas, that choice is remembered.")).addColorPicker((c2) => c2.setValue(this.plugin.newBackground()).onChange((v2) => {
-      s2.defaultBackground = v2;
-      s2.bgChosen = true;
-      save();
-    })).addExtraButton((b2) => b2.setIcon("rotate-ccw").setTooltip(tr("\u6062\u590D\u8DDF\u968F\u4E3B\u9898", "Follow the theme again")).onClick(() => {
-      s2.bgChosen = false;
-      save();
-      this.display();
-    }));
+    new import_obsidian3.Setting(containerEl).setName(noteName()).setDesc(noteDesc());
+    for (const r2 of rows()) {
+      const row = new import_obsidian3.Setting(containerEl).setName(r2.name);
+      if (r2.desc) row.setDesc(r2.desc);
+      const sl = r2.slider;
+      if (sl) row.addSlider((c2) => c2.setLimits(sl[0], sl[1], sl[2]).setValue(s2[r2.key]).onChange((v2) => {
+        this.apply(r2.key, v2);
+      }));
+      else row.addToggle((c2) => c2.setValue(s2[r2.key]).onChange((v2) => {
+        this.apply(r2.key, v2);
+      }));
+    }
+    this.background(new import_obsidian3.Setting(containerEl).setName(bgName()).setDesc(bgDesc()));
   }
 };

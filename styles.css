@@ -1,4 +1,5 @@
-.pc-root { display: flex; flex-direction: column; height: 100%; padding: 0 !important; overflow: hidden !important; }
+.pc-root { display: flex; flex-direction: column; height: 100%; padding: 0; overflow: hidden; }
+.workspace-leaf-content[data-type="pen-canvas-view"] .view-content.pc-root { padding: 0; overflow: hidden; }
 .pc-color-input { width: 28px; height: 28px; padding: 0; border: none; background: none; }
 .pc-dot { display: block; width: var(--pc-d); height: var(--pc-d); border-radius: 50%; background: var(--pc-ink, currentColor); box-shadow: 0 0 0 1px var(--background-modifier-border); }
 .pc-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: var(--pc-bg, #fff); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
@@ -62,15 +63,13 @@
 .pc-color-grid { display: grid; grid-template-columns: repeat(6, 32px); gap: 10px; }
 .pc-color-grid .pc-swatch { position: relative; width: 32px; height: 32px; min-width: 32px; padding: 0; border-radius: 50%; background: var(--pc-c); border: 2px solid var(--background-modifier-border); box-shadow: none; }
 .pc-color-grid .pc-swatch.is-active { border-color: var(--interactive-accent); outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
-.pc-swatch-custom { overflow: hidden; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red) !important; }
-.pc-swatch-custom input { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); opacity: 0; cursor: pointer; }
 .pc-ring-op { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; margin-top: 12px; }
 .pc-ring-op .pc-op-num { width: 56px; padding: 2px 4px; height: 26px; text-align: right; }
 .pc-popover.pc-fan { padding: 0; background: none; border: none; box-shadow: none; border-radius: 0; pointer-events: none; }
 .pc-fan svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; touch-action: none; }
 .pc-wedge { pointer-events: auto; cursor: pointer; stroke-width: 0.8; }
 .pc-wedge.is-off { pointer-events: none; }
-.pc-wedge.is-active { stroke: var(--text-normal) !important; stroke-width: 3; }
+.pc-wedge.is-active { stroke: var(--text-normal); stroke-width: 3; }
 .pc-wedge-empty { fill: var(--background-secondary); stroke: var(--background-modifier-border); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: auto; }
 .pc-wedge-empty.is-off { pointer-events: none; }
 .pc-fan-op { position: absolute; transform: translate(-50%, -50%); margin: 0; pointer-events: auto; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
@@ -94,8 +93,8 @@
 .pc-key-icon svg { width: 20px; height: 20px; }
 .pc-key-icon.is-active { color: var(--text-on-accent); }
 /* Corner triangle on the shape key, on the side the work zone (and its drawer) sits: right, or left in left-hand mode. */
-.pc-shape-ic::after { content: ''; position: absolute; right: -6px; bottom: -4px; width: 6px; height: 6px; background: currentColor; clip-path: polygon(100% 0, 100% 100%, 0 100%); opacity: 0.85; }
-.pc-hub.is-left .pc-shape-ic::after { right: auto; left: -6px; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+.pc-shape-ic::after { content: ''; position: absolute; right: -6px; bottom: -4px; width: 0; height: 0; border-left: 6px solid transparent; border-bottom: 6px solid currentColor; opacity: 0.85; }
+.pc-hub.is-left .pc-shape-ic::after { right: auto; left: -6px; border-left: 0; border-right: 6px solid transparent; }
 /* Drawer: the extra tools replace the work-zone keys while the core is toggled on. */
 .pc-key-main, .pc-key-drawer, .pc-key-main-ic, .pc-key-drawer-ic { transition: opacity 0.16s ease, transform 0.16s ease, fill-opacity 0.1s; }
 .pc-key-drawer, .pc-key-drawer-ic { opacity: 0; pointer-events: none; }
