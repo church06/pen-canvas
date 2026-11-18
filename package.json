@@ -1,0 +1,21 @@
+{
+  "name": "pen-canvas",
+  "version": "0.11.0",
+  "description": "Infinite handwriting canvas for Obsidian",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "obsidian": "^1.14.4",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "perfect-freehand": "^1.2.3"
+  },
+  "author": "SDesolator"
+}

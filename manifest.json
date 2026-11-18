@@ -1,0 +1,9 @@
+{
+	"id": "pen-canvas",
+	"name": "Pen Canvas",
+	"version": "0.25.3",
+	"minAppVersion": "1.5.0",
+	"description": "Infinite handwriting canvas with pressure, shapes, arrows and fill. Stores drawings as readable JSON.",
+	"author": "SDesolator",
+	"isDesktopOnly": false
+}

@@ -1,0 +1,110 @@
+.pc-root { display: flex; flex-direction: column; height: 100%; padding: 0 !important; overflow: hidden !important; }
+.pc-color-input { width: 28px; height: 28px; padding: 0; border: none; background: none; }
+.pc-dot { display: block; width: var(--pc-d); height: var(--pc-d); border-radius: 50%; background: var(--pc-ink, currentColor); box-shadow: 0 0 0 1px var(--background-modifier-border); }
+.pc-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: var(--pc-bg, #fff); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+.pc-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.pc-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 2em; text-align: center; background: var(--background-primary); color: var(--text-error); }
+.pc-msg.is-hidden { display: none; }
+.pc-hidden-input { position: fixed; left: 50%; top: 30%; opacity: 0; width: 1px; height: 1px; }
+.pc-diag { white-space: pre-wrap; font-size: 12px; user-select: text; }
+.pc-root { position: relative; }
+.pc-fill-panel { position: absolute; z-index: 20; display: flex; gap: 14px; padding: 10px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 8px; box-shadow: var(--shadow-s); }
+.pc-fill-panel.is-hidden { display: none; }
+.pc-fill-grid { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; }
+.pc-fill-swatch { width: 44px; height: 44px; padding: 1px; border: 2px solid var(--background-modifier-border); border-radius: 6px; background: transparent; box-shadow: none; }
+.pc-fill-swatch.is-active { border-color: var(--interactive-accent); }
+.pc-fill-swatch canvas { width: 38px; height: 38px; display: block; border-radius: 3px; }
+.pc-fill-density { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12px; min-width: 110px; }
+.pc-fill-density input[type="range"] { width: 110px; }
+.pc-fill-density input[type="range"]:disabled { opacity: 0.25; filter: grayscale(1); cursor: not-allowed; }
+.pc-fill-density.is-disabled { color: var(--text-faint); }
+.pc-brush .pc-dot { flex: none; }
+.pc-popover { position: absolute; z-index: 20; padding: 12px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 22px; box-shadow: var(--shadow-l); }
+.pc-popover.is-hidden { display: none; }
+.pc-bg-grid { display: grid; grid-template-columns: repeat(5, 32px); gap: 10px; }
+.pc-more-title { font-size: var(--font-ui-smaller); color: var(--text-muted); margin: 0 0 8px 2px; }
+.pc-more-acts { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--background-modifier-border); }
+.pc-more-act { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; border-radius: 18px; white-space: nowrap; }
+.pc-more-act svg { width: 16px; height: 16px; }
+.pc-more-act.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+/* Explicit sizes beat Obsidian's mobile button rules, which otherwise stretch these into ellipses. */
+.pc-popover .pc-bg-grid button.pc-bg-swatch, .pc-bg-swatch { box-sizing: border-box; width: 32px; height: 32px; min-width: 32px; max-width: 32px; min-height: 32px; max-height: 32px; aspect-ratio: 1; margin: 0; padding: 0; border-radius: 50%; background: var(--pc-c); border: 2px solid var(--background-modifier-border); box-shadow: none; }
+.pc-bg-swatch.is-active { border-color: var(--interactive-accent); outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+/* Custom background swatch: rainbow ring, with the custom colour in the middle when it is in use. */
+.pc-popover .pc-bg-grid button.pc-bg-custom-btn { background: radial-gradient(circle, var(--pc-c) 0 52%, transparent 53%), conic-gradient(#f44, #fd4, #4d4, #4dd, #48f, #d4f, #f44); }
+
+/* Hub: one quarter disk in a top corner with 4 rows (Concepts-inspired) */
+.pc-hub { position: absolute; left: 8px; top: 8px; z-index: 10; pointer-events: none; }
+.pc-hub-disk { position: absolute; inset: 0; pointer-events: none; overflow: visible; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)); }
+.pc-disk { fill: var(--background-secondary); stroke: var(--background-modifier-border); stroke-width: 1; pointer-events: auto; touch-action: none; cursor: pointer; }
+.pc-disk-sep { fill: none; stroke: var(--background-modifier-border); stroke-width: 1; }
+.pc-slide-track { fill: none; stroke: var(--background-modifier-border); stroke-width: 13; stroke-linecap: round; }
+.pc-slide-fill { fill: none; stroke: var(--interactive-accent); stroke-width: 13; stroke-linecap: round; }
+.pc-slide-handle { fill: #fff; stroke: var(--interactive-accent); stroke-width: 3; }
+.pc-slide-cap { fill: var(--text-muted); font-size: 10px; text-anchor: middle; dominant-baseline: middle; font-family: var(--font-interface); pointer-events: none; }
+.pc-hub > button { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; width: 38px; height: 38px; min-width: 38px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; box-shadow: none; color: var(--text-normal); }
+.pc-hub > button:hover { background: var(--background-modifier-hover); }
+.pc-hub > button.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+.pc-hub > button svg { width: 18px; height: 18px; }
+.pc-hub .pc-text-btn { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+.pc-hub .pc-hub-core { width: 70px; height: 70px; min-width: 70px; flex-direction: column; gap: 0; background: var(--interactive-accent); color: var(--text-on-accent); }
+.pc-hub .pc-hub-core:hover { background: var(--interactive-accent-hover); }
+.pc-core-icon { display: flex; }
+.pc-core-icon svg { width: 22px; height: 22px; }
+.pc-core-text { font-size: 10px; line-height: 1; opacity: 0.85; white-space: nowrap; }
+.pc-hub .pc-brush .pc-dot { width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 3.5px color-mix(in srgb, var(--text-normal) 45%, transparent); }
+.pc-tool-grid { display: grid; grid-template-columns: repeat(4, 44px); gap: 8px; }
+.pc-popover .pc-tool-grid button.pc-btn, .pc-tool-grid .pc-btn { box-sizing: border-box; width: 44px; height: 44px; min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px; margin: 0; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; box-shadow: none; }
+.pc-tool-grid .pc-btn.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+/* Fixed icon size (mobile Obsidian shrinks icons in buttons via --icon-size and padding). */
+.pc-popover .pc-tool-grid .pc-btn svg, .pc-popover .pc-tool-grid .pc-btn .svg-icon { width: 22px; height: 22px; min-width: 22px; flex: none; --icon-size: 22px; }
+.pc-hub .pc-key-icon svg, .pc-hub .pc-key-icon .svg-icon { width: 20px; height: 20px; min-width: 20px; flex: none; --icon-size: 20px; }
+.pc-color-grid { display: grid; grid-template-columns: repeat(6, 32px); gap: 10px; }
+.pc-color-grid .pc-swatch { position: relative; width: 32px; height: 32px; min-width: 32px; padding: 0; border-radius: 50%; background: var(--pc-c); border: 2px solid var(--background-modifier-border); box-shadow: none; }
+.pc-color-grid .pc-swatch.is-active { border-color: var(--interactive-accent); outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+.pc-swatch-custom { overflow: hidden; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red) !important; }
+.pc-swatch-custom input { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); opacity: 0; cursor: pointer; }
+.pc-ring-op { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; margin-top: 12px; }
+.pc-ring-op .pc-op-num { width: 56px; padding: 2px 4px; height: 26px; text-align: right; }
+.pc-popover.pc-fan { padding: 0; background: none; border: none; box-shadow: none; border-radius: 0; pointer-events: none; }
+.pc-fan svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; touch-action: none; }
+.pc-wedge { pointer-events: auto; cursor: pointer; stroke-width: 0.8; }
+.pc-wedge.is-off { pointer-events: none; }
+.pc-wedge.is-active { stroke: var(--text-normal) !important; stroke-width: 3; }
+.pc-wedge-empty { fill: var(--background-secondary); stroke: var(--background-modifier-border); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: auto; }
+.pc-wedge-empty.is-off { pointer-events: none; }
+.pc-fan-op { position: absolute; transform: translate(-50%, -50%); margin: 0; pointer-events: auto; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.pc-fan-custom { position: absolute; left: 50%; top: 50%; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.pc-grip { fill: var(--text-muted); pointer-events: none; }
+/* Opaque shape inside a translucent group, so the rounding stroke does not double the tint. */
+.pc-grip-g { opacity: 0.12; pointer-events: none; }
+.pc-grip-band { fill: var(--text-normal); stroke: var(--text-normal); stroke-width: 8; stroke-linejoin: round; }
+.pc-wedge-code { font-size: 8px; font-family: var(--font-monospace); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.pc-hub-keys { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pc-key { pointer-events: all; cursor: pointer; touch-action: none; fill-opacity: 0; stroke: none; transition: fill-opacity 0.1s; }
+.pc-key-bg { fill-opacity: 0.16; pointer-events: none; }
+/* Gap between groups, the same disc colour as the gap around the centre button. */
+.pc-key-sep { fill: none; stroke: var(--background-secondary); stroke-width: 1; stroke-linecap: butt; pointer-events: none; }
+.pc-key-work { fill: var(--interactive-accent); }
+.pc-key-aux { fill: var(--color-cyan, #00bfbc); }
+.pc-key:hover { fill-opacity: 0.15; }
+.pc-key:active { fill-opacity: 0.3; }
+.pc-key.is-active { fill: var(--interactive-accent); fill-opacity: 1; }
+.pc-key-icon { position: absolute; transform: translate(-50%, -50%); pointer-events: none; display: inline-flex; align-items: center; justify-content: center; color: var(--text-normal); }
+.pc-key-icon svg { width: 20px; height: 20px; }
+.pc-key-icon.is-active { color: var(--text-on-accent); }
+/* Corner triangle on the shape key, on the side the work zone (and its drawer) sits: right, or left in left-hand mode. */
+.pc-shape-ic::after { content: ''; position: absolute; right: -6px; bottom: -4px; width: 6px; height: 6px; background: currentColor; clip-path: polygon(100% 0, 100% 100%, 0 100%); opacity: 0.85; }
+.pc-hub.is-left .pc-shape-ic::after { right: auto; left: -6px; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+/* Drawer: the extra tools replace the work-zone keys while the core is toggled on. */
+.pc-key-main, .pc-key-drawer, .pc-key-main-ic, .pc-key-drawer-ic { transition: opacity 0.16s ease, transform 0.16s ease, fill-opacity 0.1s; }
+.pc-key-drawer, .pc-key-drawer-ic { opacity: 0; pointer-events: none; }
+.pc-key-drawer-ic { transform: translate(-50%, -50%) scale(0.6); }
+.pc-hub.is-drawer .pc-key-drawer { opacity: 1; pointer-events: all; }
+.pc-hub.is-drawer .pc-key-drawer-ic { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.pc-hub.is-drawer .pc-key-main, .pc-hub.is-drawer .pc-key-main-ic { opacity: 0; pointer-events: none; }
+.pc-hub.is-drawer .pc-key-main-ic { transform: translate(-50%, -50%) scale(0.6); }
+.pc-hub.is-drawer .pc-hub-core, .pc-hub.is-hand .pc-hub-core { box-shadow: 0 0 0 3px var(--background-secondary), 0 0 0 5px var(--interactive-accent); }
+
+/* No grey/blue flash on tap (mobile WebView). */
+.pc-hub, .pc-hub *, .pc-popover, .pc-popover *, .pc-fill-panel, .pc-fill-panel * { -webkit-tap-highlight-color: transparent; }
