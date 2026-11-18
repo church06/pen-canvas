@@ -23,17 +23,17 @@ __export(main_exports, {
   default: () => PenCanvasPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/i18n.ts
+var import_obsidian = require("obsidian");
 var lang = "auto";
 function setLang(l2) {
   lang = l2;
 }
 function isZh() {
-  var _a;
   if (lang !== "auto") return lang === "zh";
-  return ((_a = window.localStorage.getItem("language")) != null ? _a : "").startsWith("zh");
+  return (0, import_obsidian.getLanguage)().startsWith("zh");
 }
 var tr = (zh, en) => isZh() ? zh : en;
 
@@ -419,7 +419,7 @@ function paintTiles(t2, sp, r2) {
 function fillPattern(ctx, color, sp, key) {
   const hit = patterns.get(key);
   if (hit) return hit.pat;
-  const cv = document.createElement("canvas");
+  const cv = createEl("canvas");
   cv.width = cv.height = Math.ceil(sp.size * sp.res);
   const t2 = cv.getContext("2d");
   t2.scale(sp.res, sp.res);
@@ -453,7 +453,7 @@ function patternFill(ctx, it, clip, rule, bbox) {
       cv = (_b = screens.get(k0)) == null ? void 0 : _b.cv;
       screens.delete(k0);
     }
-    cv != null ? cv : cv = document.createElement("canvas");
+    cv != null ? cv : cv = createEl("canvas");
     if (cv.width !== cw || cv.height !== ch) {
       cv.width = cw;
       cv.height = ch;
@@ -729,7 +729,7 @@ function bucketRegion(items, vb, scale, wx, wy, gapPx = 5) {
     W = Math.ceil(W * f2);
     H = Math.ceil(H * f2);
   }
-  const cv = document.createElement("canvas");
+  const cv = createEl("canvas");
   cv.width = W;
   cv.height = H;
   const ctx = cv.getContext("2d", { willReadFrequently: true });
@@ -803,9 +803,11 @@ function traceRings(m2, W, H) {
   const adj = /* @__PURE__ */ new Map();
   const pos = /* @__PURE__ */ new Map();
   const link = (a2, b2) => {
-    var _a, _b;
-    ((_a = adj.get(a2)) != null ? _a : adj.set(a2, []).get(a2)).push(b2);
-    ((_b = adj.get(b2)) != null ? _b : adj.set(b2, []).get(b2)).push(a2);
+    const la = adj.get(a2), lb = adj.get(b2);
+    if (la) la.push(b2);
+    else adj.set(a2, [b2]);
+    if (lb) lb.push(a2);
+    else adj.set(b2, [a2]);
   };
   for (let y2 = -1; y2 < H; y2++) for (let x2 = -1; x2 < W; x2++) {
     const c2 = at(x2, y2) << 3 | at(x2 + 1, y2) << 2 | at(x2 + 1, y2 + 1) << 1 | at(x2, y2 + 1);
@@ -975,15 +977,17 @@ function parseColor(c2) {
   const hit = colorCache.get(c2);
   if (hit) return hit;
   if (!colorCtx) {
-    const cv = document.createElement("canvas");
+    const cv = createEl("canvas");
     cv.width = cv.height = 1;
     colorCtx = cv.getContext("2d", { willReadFrequently: true });
   }
-  colorCtx.clearRect(0, 0, 1, 1);
-  colorCtx.fillStyle = "#000";
-  colorCtx.fillStyle = c2;
-  colorCtx.fillRect(0, 0, 1, 1);
-  const d2 = colorCtx.getImageData(0, 0, 1, 1).data;
+  const ctx = colorCtx;
+  if (!ctx) return [0, 0, 0, 1];
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillStyle = "#000";
+  ctx.fillStyle = c2;
+  ctx.fillRect(0, 0, 1, 1);
+  const d2 = ctx.getImageData(0, 0, 1, 1).data;
   const v2 = [d2[0] / 255, d2[1] / 255, d2[2] / 255, d2[3] / 255];
   if (colorCache.size > 256) colorCache.clear();
   colorCache.set(c2, v2);
@@ -1340,7 +1344,7 @@ function smoothPath(pts, fromVertex = true) {
 }
 
 // src/view.ts
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 
 // src/types.ts
 var fillStyles = () => [
@@ -1404,7 +1408,7 @@ var FAN_COLUMNS = [
 var SLOW_MS = 10;
 var clipboard = [];
 var pasteCount = 0;
-(0, import_obsidian.addIcon)("pc-left-hand", '<g transform="translate(100,0) scale(-4.1667,4.1667)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g>');
+(0, import_obsidian2.addIcon)("pc-left-hand", '<g transform="translate(100,0) scale(-4.1667,4.1667)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g>');
 var EXT = "pencanvas";
 var DARK_BG = "#1e1e1e";
 var DARK_BG_CONST = DARK_BG;
@@ -1417,7 +1421,7 @@ var backgrounds = () => [
   [tr("\u6DF1\u7070", "Dark grey"), "#2b2b2b"],
   [tr("\u9ED1\u8272", "Black"), "#111111"]
 ];
-var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
+var _PenCanvasView = class _PenCanvasView extends import_obsidian2.TextFileView {
   constructor(leaf, plugin) {
     super(leaf);
     this.doc = emptyDoc("#ffffff");
@@ -1613,7 +1617,6 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       }
     };
     this.onUp = (e2) => {
-      if (e2.type === "pointercancel" && e2.pointerType !== "touch") console.log(`[pen-canvas] pointercancel from ${e2.pointerType}`);
       if (e2.pointerType === "touch") {
         this.touches.delete(e2.pointerId);
         if (this.pinch) {
@@ -1691,8 +1694,8 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       this.scheduleViewRender();
     };
     this.plugin = plugin;
-    this.color = document.body.classList.contains("theme-dark") ? "#ffffff" : "#1e1e1e";
-    this.scope = new import_obsidian.Scope(this.app.scope);
+    this.color = activeDocument.body.classList.contains("theme-dark") ? "#ffffff" : "#1e1e1e";
+    this.scope = new import_obsidian2.Scope(this.app.scope);
     this.scope.register(["Mod"], "z", () => {
       this.undo();
       return false;
@@ -1760,7 +1763,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     } catch (e2) {
       this.broken = data;
       this.doc = emptyDoc(this.plugin.newBackground());
-      new import_obsidian.Notice(tr("\u624B\u5199\u753B\u5E03\uFF1A\u6587\u4EF6\u65E0\u6CD5\u89E3\u6790\uFF0C\u5DF2\u8FDB\u5165\u53EA\u8BFB\u4FDD\u62A4\uFF0C\u4E0D\u4F1A\u5199\u56DE\u3002", "Pen canvas: this file could not be read. It is open read-only and will not be saved. ") + String(e2));
+      new import_obsidian2.Notice(tr("\u624B\u5199\u753B\u5E03\uFF1A\u6587\u4EF6\u65E0\u6CD5\u89E3\u6790\uFF0C\u5DF2\u8FDB\u5165\u53EA\u8BFB\u4FDD\u62A4\uFF0C\u4E0D\u4F1A\u5199\u56DE\u3002", "Pen canvas: this file could not be read. It is open read-only and will not be saved. ") + String(e2));
     }
     if (clear) {
       this.undoStack = [];
@@ -1828,7 +1831,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
   async onClose() {
     var _a, _b;
     (_a = this.ro) == null ? void 0 : _a.disconnect();
-    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.raf) window.cancelAnimationFrame(this.raf);
     (_b = this.gl) == null ? void 0 : _b.dispose();
     this.gl = null;
   }
@@ -1848,7 +1851,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
   }
   btn(parent, icon, label, onClick) {
     const b2 = parent.createEl("button", { cls: "pc-btn", attr: { "aria-label": label } });
-    (0, import_obsidian.setIcon)(b2, icon);
+    (0, import_obsidian2.setIcon)(b2, icon);
     b2.addEventListener("click", onClick);
     return b2;
   }
@@ -1880,7 +1883,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     this.shield(hub);
     this.toolbarEl = hub;
     hub.style.width = hub.style.height = `${2 * H.R}px`;
-    this.hubSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    this.hubSvg = createSvg("svg");
     this.hubSvg.classList.add("pc-hub-disk");
     hub.appendChild(this.hubSvg);
     const core = hub.createEl("button", { cls: "pc-btn pc-hub-core", attr: { "aria-label": tr("\u5E73\u79FB\uFF08\u518D\u70B9\u4E00\u6B21\u56DE\u5230\u4E0A\u4E00\u4E2A\u5DE5\u5177\uFF09", "Pan (tap again for the previous tool)") } });
@@ -1893,29 +1896,28 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       }
       this.setTool(this.tool === "hand" ? this.backTool : "hand");
     });
-    const NS = "http://www.w3.org/2000/svg";
-    const keys = document.createElementNS(NS, "svg");
+    const keys = createSvg("svg");
     keys.classList.add("pc-hub-keys");
     keys.setAttribute("viewBox", `0 0 ${2 * H.R} ${2 * H.R}`);
     hub.appendChild(keys);
     for (const [cls, mid, span] of [["pc-key-work", 0, 216], ["pc-key-aux", 216, 72], ["pc-key-aux", 144, 72]]) {
-      const bgp = document.createElementNS(NS, "path");
+      const bgp = createSvg("path");
       bgp.setAttribute("class", `pc-key-bg ${cls}`);
       keys.appendChild(bgp);
       this.hubKeys.push({ path: bgp, ic: null, mid, span });
     }
     const key = (zone, label, mid, span, fn, icon) => {
-      const path = document.createElementNS(NS, "path");
+      const path = createSvg("path");
       path.setAttribute("class", `pc-key ${zone}`);
       path.setAttribute("aria-label", label);
       path.setAttribute("role", "button");
-      const title = document.createElementNS(NS, "title");
+      const title = createSvg("title");
       title.textContent = label;
       path.appendChild(title);
       path.addEventListener("click", fn);
       keys.appendChild(path);
       const ic = hub.createSpan({ cls: "pc-key-icon" });
-      if (icon) (0, import_obsidian.setIcon)(ic, icon);
+      if (icon) (0, import_obsidian2.setIcon)(ic, icon);
       this.hubKeys.push({ path, ic, mid, span });
       this.keyIcon.set(path, ic);
       return { path, ic };
@@ -1962,7 +1964,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     key("pc-key-aux", tr("\u590D\u5236\u6240\u9009 (Ctrl+C)", "Copy selection (Ctrl+C)"), 162, 36, () => this.copySelected(), "copy");
     key("pc-key-aux", tr("\u7C98\u8D34 (Ctrl+V)", "Paste (Ctrl+V)"), 126, 36, () => this.paste(), "clipboard-paste");
     for (const a2 of [108, 180, 252]) {
-      const line = document.createElementNS(NS, "path");
+      const line = createSvg("path");
       line.setAttribute("class", "pc-key-sep");
       keys.appendChild(line);
       this.hubSeps.push([line, a2]);
@@ -2025,8 +2027,8 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     };
     svg.addEventListener("pointerup", end);
     svg.addEventListener("pointercancel", end);
-    this.opRange = document.createElement("input");
-    this.opNum = document.createElement("input");
+    this.opRange = createEl("input");
+    this.opNum = createEl("input");
     this.opNum.className = "pc-op-num";
     Object.assign(this.opNum, { type: "number", min: "5", max: "100", step: "1" });
     this.opNum.addEventListener("change", () => this.setOpacity(Number(this.opNum.value), true));
@@ -2139,15 +2141,26 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     const ts = (this.size - 1) / 29, to = (this.opacity * 100 - 5) / 95;
     const sA = lo + ts * span, oA = ro - to * span;
     const [hx1, hy1] = pt(sA), [hx2, hy2] = pt(oA);
-    svg.innerHTML = `<circle class="pc-disk" cx="${c2}" cy="${c2}" r="${R2 - 1}"/><circle class="pc-disk-sep" cx="${c2}" cy="${c2}" r="${H.slideR - 15}"/><g class="pc-grip-g">${[-90, 90].map((d2) => `<path class="pc-grip-band" d="${this.gripPath(d2, gapA)}"/>`).join("")}</g><path class="pc-slide-track" d="${arc(lo, lo + span)}"/><path class="pc-slide-track" d="${arc(ro, ro - span)}"/><path class="pc-slide-fill" d="${arc(lo, sA)}"/><path class="pc-slide-fill" d="${arc(ro, oA)}"/><circle class="pc-slide-handle" cx="${hx1}" cy="${hy1}" r="10"/><circle class="pc-slide-handle" cx="${hx2}" cy="${hy2}" r="10"/>` + // Grips: a band across the free top and bottom of the outer ring (the whole band is the hit area) with dots.
-    // Top: drag handle, a 3 x 2 dot grid along the band. Bottom: "···" for the settings menu.
-    [-5, 0, 5].map((o2) => [-3.5, 3.5].map((dr) => {
+    svg.empty();
+    const el = (tag, cls, attr, parent = svg) => createSvg(tag, { cls, attr, parent });
+    el("circle", "pc-disk", { cx: c2, cy: c2, r: R2 - 1 });
+    el("circle", "pc-disk-sep", { cx: c2, cy: c2, r: H.slideR - 15 });
+    const gg = el("g", "pc-grip-g", {});
+    for (const d2 of [-90, 90]) el("path", "pc-grip-band", { d: this.gripPath(d2, gapA) }, gg);
+    el("path", "pc-slide-track", { d: arc(lo, lo + span) });
+    el("path", "pc-slide-track", { d: arc(ro, ro - span) });
+    el("path", "pc-slide-fill", { d: arc(lo, sA) });
+    el("path", "pc-slide-fill", { d: arc(ro, oA) });
+    el("circle", "pc-slide-handle", { cx: hx1, cy: hy1, r: 10 });
+    el("circle", "pc-slide-handle", { cx: hx2, cy: hy2, r: 10 });
+    for (const o2 of [-5, 0, 5]) for (const dr of [-3.5, 3.5]) {
       const [x2, y2] = pt(-90 + o2, H.slideR + dr);
-      return `<circle class="pc-grip" cx="${x2}" cy="${y2}" r="1.8"/>`;
-    }).join("")).join("") + [-8, 0, 8].map((o2) => {
+      el("circle", "pc-grip", { cx: x2, cy: y2, r: 1.8 });
+    }
+    for (const o2 of [-8, 0, 8]) {
       const [x2, y2] = pt(90 + o2);
-      return `<circle class="pc-grip" cx="${x2}" cy="${y2}" r="3"/>`;
-    }).join("");
+      el("circle", "pc-grip", { cx: x2, cy: y2, r: 3 });
+    }
     (_a = this.coreText) == null ? void 0 : _a.setText(`${this.size}px \xB7 ${Math.round(this.opacity * 100)}%`);
   }
   /** Popovers open beside the disc (below it when there is room, else above). */
@@ -2204,7 +2217,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     this.densityRange.addEventListener("change", () => {
       if (this.selected.size) this.mutateSelected((it) => it.fill ? this.withFillStyle({ ...it }) : it);
     });
-    this.registerDomEvent(document, "pointerdown", (e2) => {
+    this.registerDomEvent(activeDocument, "pointerdown", (e2) => {
       var _a, _b;
       const t2 = e2.target;
       if (!p2.contains(t2) && !((_b = (_a = this.quickBtns.get("fill")) != null ? _a : this.toolBtns.get("fill")) == null ? void 0 : _b.contains(t2))) this.closeFillPanel();
@@ -2223,7 +2236,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       c2.setTransform(1, 0, 0, 1, 0, 0);
       c2.clearRect(0, 0, cv.width, cv.height);
       c2.setTransform(k2, 0, 0, k2, 0, 0);
-      const mono = document.body.classList.contains("theme-dark") ? "#ffffff" : "#000000";
+      const mono = activeDocument.body.classList.contains("theme-dark") ? "#ffffff" : "#000000";
       drawFillIcon(c2, st, mono);
     }
     this.densityRange.disabled = solid;
@@ -2318,7 +2331,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       const acts = el.createDiv({ cls: "pc-more-acts" });
       const act = (icon, text, fn) => {
         const b2 = acts.createEl("button", { cls: "pc-more-act" });
-        (0, import_obsidian.setIcon)(b2.createSpan(), icon);
+        (0, import_obsidian2.setIcon)(b2.createSpan(), icon);
         b2.createSpan({ text });
         b2.addEventListener("click", fn);
         return b2;
@@ -2354,12 +2367,11 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       };
     } else {
       el.addClass("pc-fan");
-      const NS = "http://www.w3.org/2000/svg";
-      const svg = document.createElementNS(NS, "svg");
+      const svg = createSvg("svg");
       el.appendChild(svg);
-      const rot2 = document.createElementNS(NS, "g");
+      const rot2 = createSvg("g");
       svg.appendChild(rot2);
-      const lab = document.createElementNS(NS, "g");
+      const lab = createSvg("g");
       svg.appendChild(lab);
       let labs = [];
       const placeLabels = (delta) => {
@@ -2409,7 +2421,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       };
       const stopSpin = () => {
         if (spin) {
-          cancelAnimationFrame(spin);
+          window.cancelAnimationFrame(spin);
           spin = 0;
         }
       };
@@ -2469,13 +2481,13 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
           last = t2;
           turn(v2 * dt);
           v2 *= Math.pow(0.994, dt);
-          if (Math.abs(v2) > 0.01) spin = requestAnimationFrame(step);
+          if (Math.abs(v2) > 0.01) spin = window.requestAnimationFrame(step);
           else {
             spin = 0;
             refresh();
           }
         };
-        spin = requestAnimationFrame(step);
+        spin = window.requestAnimationFrame(step);
       };
       svg.addEventListener("pointerup", release);
       svg.addEventListener("pointercancel", release);
@@ -2499,8 +2511,11 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
         svg.style.setProperty("mask-image", mask);
         const pt = (r2, d2) => `${(F2 + r2 * Math.cos(d2 * Math.PI / 180)).toFixed(2)} ${(F2 + r2 * Math.sin(d2 * Math.PI / 180)).toFixed(2)}`;
         const cols = [...FAN_COLUMNS.slice(0, -1), ["custom", ...((_a = this.plugin.settings.recentColors) != null ? _a : []).slice(0, 3)]];
-        let h2 = "";
-        let active = "", labels = "";
+        rot2.empty();
+        lab.empty();
+        rot2.removeAttribute("transform");
+        const activeCells = [];
+        labs = [];
         const k0 = Math.floor((this.fanDir - 180 - this.fanOff) / STEP), k1 = Math.ceil((this.fanDir + 180 - this.fanOff) / STEP);
         for (let k2 = k0; k2 < k1; k2++) {
           const a0 = this.fanOff + k2 * STEP, a1 = a0 + STEP, am = a0 + STEP / 2;
@@ -2512,7 +2527,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
             const r0 = R0 + j2 * RH, r1 = r0 + RH;
             const d2 = `M ${pt(r0, a0)} A ${r0} ${r0} 0 0 1 ${pt(r0, a1)} L ${pt(r1, a1)} A ${r1} ${r1} 0 0 0 ${pt(r1, a0)} Z`;
             if (!c2) {
-              h2 += `<path class="pc-wedge-empty${off ? " is-off" : ""}" d="${d2}"/>`;
+              createSvg("path", { cls: off ? "pc-wedge-empty is-off" : "pc-wedge-empty", attr: { d: d2 }, parent: rot2 });
               continue;
             }
             const isCustom = c2 === "custom";
@@ -2520,20 +2535,23 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
             let fill = c2;
             if (isCustom) {
               const [gx0, gy0] = pt((r0 + r1) / 2, a0).split(" "), [gx1, gy1] = pt((r0 + r1) / 2, a1).split(" ");
-              h2 += `<linearGradient id="pc-rainbow-${k2}" gradientUnits="userSpaceOnUse" x1="${gx0}" y1="${gy0}" x2="${gx1}" y2="${gy1}"><stop offset="0" stop-color="#f00"/><stop offset=".33" stop-color="#0f0"/><stop offset=".66" stop-color="#00f"/><stop offset="1" stop-color="#f0f"/></linearGradient>`;
+              const g2 = createSvg("linearGradient", { attr: { id: `pc-rainbow-${k2}`, gradientUnits: "userSpaceOnUse", x1: gx0, y1: gy0, x2: gx1, y2: gy1 }, parent: rot2 });
+              for (const [o2, sc] of [["0", "#f00"], [".33", "#0f0"], [".66", "#00f"], ["1", "#f0f"]]) createSvg("stop", { attr: { offset: o2, "stop-color": sc }, parent: g2 });
               fill = `url(#pc-rainbow-${k2})`;
             }
-            const cell = `<path class="pc-wedge${on ? " is-active" : ""}${off ? " is-off" : ""}" data-color="${c2}" fill="${fill}" style="stroke: ${isCustom ? "none" : /^#f[0-9a-f]f[0-9a-f]f[0-9a-f]$/i.test(c2) ? "var(--background-modifier-border)" : c2}" d="${d2}"/>`;
-            if (on) active += cell.replace(`style="stroke: ${c2}"`, "");
-            else h2 += cell;
+            const cell = createSvg("path", { cls: ["pc-wedge", ...on ? ["is-active"] : [], ...off ? ["is-off"] : []], attr: { "data-color": c2, fill, d: d2 } });
+            if (!on) cell.style.stroke = isCustom ? "none" : /^#f[0-9a-f]f[0-9a-f]f[0-9a-f]$/i.test(c2) ? "var(--background-modifier-border)" : c2;
+            if (on) activeCells.push(cell);
+            else rot2.appendChild(cell);
             const label = isCustom ? tr("\u81EA\u5B9A\u4E49", "Custom") : c2.slice(1).toUpperCase();
-            labels += `<text class="pc-wedge-code" style="fill: ${isCustom ? "#fff" : textOn(c2)}" data-a="${am}" data-r="${(r0 + r1) / 2}">${label}</text>`;
+            const r2 = (r0 + r1) / 2;
+            const t2 = createSvg("text", { cls: "pc-wedge-code", parent: lab });
+            t2.style.fill = isCustom ? "#fff" : textOn(c2);
+            t2.textContent = label;
+            labs.push({ el: t2, a: am, r: r2 });
           }
         }
-        rot2.innerHTML = h2 + active;
-        rot2.removeAttribute("transform");
-        lab.innerHTML = labels;
-        labs = [...lab.querySelectorAll("text")].map((el2) => ({ el: el2, a: Number(el2.dataset.a), r: Number(el2.dataset.r) }));
+        for (const cell of activeCells) rot2.appendChild(cell);
         placeLabels(0);
         built = this.fanOff;
         const a2 = this.fanDir * Math.PI / 180;
@@ -2545,7 +2563,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       };
     }
     this.popovers.set(name, { el, anchor, refresh });
-    this.registerDomEvent(document, "pointerdown", (e2) => {
+    this.registerDomEvent(activeDocument, "pointerdown", (e2) => {
       const t2 = e2.target;
       if (!el.contains(t2) && !anchor().contains(t2)) el.addClass("is-hidden");
     }, true);
@@ -2617,7 +2635,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
         ic.toggleClass("is-active", on);
         if (ic.dataset.icon !== si[1]) {
           ic.empty();
-          (0, import_obsidian.setIcon)(ic, si[1]);
+          (0, import_obsidian2.setIcon)(ic, si[1]);
           ic.dataset.icon = si[1];
         }
       }
@@ -2632,7 +2650,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     const ti = _PenCanvasView.TOOLS.find(([t2]) => t2 === this.tool);
     if (this.coreIcon && ti && this.coreIcon.dataset.icon !== ti[1]) {
       this.coreIcon.empty();
-      (0, import_obsidian.setIcon)(this.coreIcon, ti[1]);
+      (0, import_obsidian2.setIcon)(this.coreIcon, ti[1]);
       this.coreIcon.dataset.icon = ti[1];
     }
     this.drawRingIfOpen();
@@ -2705,7 +2723,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       window.clearTimeout(this.viewTimer);
       this.viewTimer = 0;
     }
-    if (!this.raf) this.raf = requestAnimationFrame(() => {
+    if (!this.raf) this.raf = window.requestAnimationFrame(() => {
       this.raf = 0;
       this.renderBase();
     });
@@ -2719,7 +2737,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       this.scheduleRender();
       return;
     }
-    if (!this.raf) this.raf = requestAnimationFrame(() => {
+    if (!this.raf) this.raf = window.requestAnimationFrame(() => {
       this.raf = 0;
       this.drawSnap();
     });
@@ -2794,7 +2812,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     c2.restore();
   }
   layer() {
-    const cv = document.createElement("canvas");
+    const cv = createEl("canvas");
     cv.width = this.bctx.canvas.width;
     cv.height = this.bctx.canvas.height;
     const c2 = cv.getContext("2d");
@@ -2830,14 +2848,14 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     this.applyT(c2);
     this.drawSelBox(c2, this.drawItems(c2, () => true, moving), this.moveDx, this.moveDy);
     this.lastRenderMs = Math.max(this.lastRenderMs * 0.5, performance.now() - t0);
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       const d2 = performance.now() - t0 - 17;
       if (d2 > this.lastRenderMs) this.lastRenderMs = d2;
     });
     if (moving) return;
     if (this.lastRenderMs >= SLOW_MS) {
       const w2 = c2.canvas.width, h2 = c2.canvas.height;
-      const cv = ((_a = this.snap) == null ? void 0 : _a.cv.width) === w2 && this.snap.cv.height === h2 ? this.snap.cv : Object.assign(document.createElement("canvas"), { width: w2, height: h2 });
+      const cv = ((_a = this.snap) == null ? void 0 : _a.cv.width) === w2 && this.snap.cv.height === h2 ? this.snap.cv : Object.assign(createEl("canvas"), { width: w2, height: h2 });
       const sc = cv.getContext("2d");
       sc.clearRect(0, 0, w2, h2);
       sc.drawImage(c2.canvas, 0, 0);
@@ -2886,7 +2904,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
   }
   copySelected() {
     if (!this.selected.size) {
-      new import_obsidian.Notice(tr("\u5148\u9009\u4E2D\u8981\u590D\u5236\u7684\u5185\u5BB9", "Select something to copy first"));
+      new import_obsidian2.Notice(tr("\u5148\u9009\u4E2D\u8981\u590D\u5236\u7684\u5185\u5BB9", "Select something to copy first"));
       return;
     }
     clipboard = this.doc.items.filter((it) => this.selected.has(it.id)).map((it) => JSON.parse(JSON.stringify(it)));
@@ -2895,7 +2913,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
   /** Paste the copied items, offset a little more each time; centred in the view when the originals are off screen. */
   paste() {
     if (!clipboard.length) {
-      new import_obsidian.Notice(tr("\u8FD8\u6CA1\u6709\u590D\u5236\u5185\u5BB9", "Nothing has been copied yet"));
+      new import_obsidian2.Notice(tr("\u8FD8\u6CA1\u6709\u590D\u5236\u5185\u5BB9", "Nothing has been copied yet"));
       return;
     }
     if (this.broken !== null) return;
@@ -3116,7 +3134,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
     if (res.kind === "wall") return;
     if (res.kind === "open" || !res.rings.length) {
       if (best) this.replaceItem(best, this.withFillStyle({ ...best, fill: ink }));
-      else new import_obsidian.Notice(tr("\u8FD9\u91CC\u4E0D\u662F\u5C01\u95ED\u533A\u57DF\uFF08\u6216\u8005\u533A\u57DF\u8D85\u51FA\u4E86\u5F53\u524D\u5C4F\u5E55\uFF09", "This is not a closed area (or it extends past the screen)"));
+      else new import_obsidian2.Notice(tr("\u8FD9\u91CC\u4E0D\u662F\u5C01\u95ED\u533A\u57DF\uFF08\u6216\u8005\u533A\u57DF\u8D85\u51FA\u4E86\u5F53\u524D\u5C4F\u5E55\uFF09", "This is not a closed area (or it extends past the screen)"));
       return;
     }
     if (best && res.rings.length === 1 && Math.abs(res.area - bestA) / bestA < 0.12) {
@@ -3256,7 +3274,7 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
   /** Draw newly frozen outline pieces of the live stroke onto the bake canvas (opaque colour). */
   bakeLive(g2, lo) {
     var _a, _b, _c;
-    const cv = (_a = this.bakeCv) != null ? _a : this.bakeCv = document.createElement("canvas");
+    const cv = (_a = this.bakeCv) != null ? _a : this.bakeCv = createEl("canvas");
     const ctx = cv.getContext("2d");
     const W = this.live.width, H = this.live.height;
     const sig = `${W}x${H}|${this.dpr}|${this.scale}|${this.vx}|${this.vy}`;
@@ -3366,9 +3384,9 @@ var _PenCanvasView = class _PenCanvasView extends import_obsidian.TextFileView {
       tr(`\u89C1\u5230\u7684\u8F93\u5165\u7C7B\u578B\uFF1A${[...this.diag.types].join(", ") || "\uFF08\u8FD8\u6CA1\u6709\uFF09"}`, `Input types seen: ${[...this.diag.types].join(", ") || "(none yet)"}`),
       tr(`\u4E0A\u4E00\u7B14\uFF1A${this.diag.last || "\uFF08\u5148\u753B\u4E00\u7B14\u518D\u770B\uFF09"}`, `Last stroke: ${this.diag.last || "(draw a stroke first)"}`),
       `devicePixelRatio: ${window.devicePixelRatio}`,
-      `UA: ${navigator.userAgent}`
+      `Platform: ${["isDesktopApp", "isMobileApp", "isAndroidApp", "isIosApp", "isTablet", "isPhone"].filter((k2) => import_obsidian2.Platform[k2]).join(", ")}`
     ];
-    const m2 = new import_obsidian.Modal(this.app);
+    const m2 = new import_obsidian2.Modal(this.app);
     m2.titleEl.setText(tr("\u624B\u5199\u8F93\u5165\u8BCA\u65AD", "Pen input diagnostics"));
     const pre = m2.contentEl.createEl("pre", { cls: "pc-diag" });
     pre.setText(lines.join("\n"));
@@ -3426,7 +3444,7 @@ function drawFillIcon(c2, st, color) {
 
 // src/main.ts
 var newLabel = () => tr("\u65B0\u5EFA\u624B\u5199\u753B\u5E03", "New pen canvas");
-var PenCanvasPlugin = class extends import_obsidian2.Plugin {
+var PenCanvasPlugin = class extends import_obsidian3.Plugin {
   constructor() {
     super(...arguments);
     this.settings = { ...DEFAULT_SETTINGS };
@@ -3454,7 +3472,7 @@ var PenCanvasPlugin = class extends import_obsidian2.Plugin {
     });
     this.registerEvent(this.app.workspace.on("file-menu", (menu, file, source) => {
       try {
-        const folder = file instanceof import_obsidian2.TFolder ? file : file.parent;
+        const folder = file instanceof import_obsidian3.TFolder ? file : file.parent;
         if (!folder) return;
         menu.addItem((item) => item.setTitle(newLabel()).setIcon("pen-tool").onClick(() => {
           void this.createCanvas(folder);
@@ -3464,18 +3482,16 @@ var PenCanvasPlugin = class extends import_obsidian2.Plugin {
       }
     }));
     this.addSettingTab(new PenCanvasSettingTab(this.app, this));
-    console.log(`[pen-canvas] ${this.manifest.version} loaded`);
   }
   async createCanvas(folder) {
     var _a;
     const active = this.app.workspace.getActiveFile();
     const parent = folder != null ? folder : this.app.fileManager.getNewFileParent((_a = active == null ? void 0 : active.path) != null ? _a : "");
     const dir = parent.isRoot() ? "" : parent.path + "/";
-    let path = "";
-    for (let i2 = 0; ; i2++) {
-      path = (0, import_obsidian2.normalizePath)(`${dir}${tr("\u624B\u5199\u753B\u5E03", "Pen canvas")}${i2 ? " " + i2 : ""}.${EXT}`);
-      if (!this.app.vault.getAbstractFileByPath(path)) break;
-    }
+    const base = tr("\u624B\u5199\u753B\u5E03", "Pen canvas");
+    let i2 = 0;
+    while (this.app.vault.getAbstractFileByPath((0, import_obsidian3.normalizePath)(`${dir}${base}${i2 ? " " + i2 : ""}.${EXT}`))) i2++;
+    const path = (0, import_obsidian3.normalizePath)(`${dir}${base}${i2 ? " " + i2 : ""}.${EXT}`);
     const file = await this.app.vault.create(path, serialize(emptyDoc(this.newBackground())));
     await this.app.workspace.getLeaf(true).openFile(file);
   }
@@ -3489,7 +3505,7 @@ var PenCanvasPlugin = class extends import_obsidian2.Plugin {
   /** Background for a new canvas: the last one picked, or black/white following the theme. */
   newBackground() {
     if (this.settings.bgChosen) return this.settings.defaultBackground;
-    return document.body.classList.contains("theme-dark") ? DARK_BG : "#ffffff";
+    return activeDocument.body.classList.contains("theme-dark") ? DARK_BG : "#ffffff";
   }
   async loadSettings() {
     this.settings = { ...DEFAULT_SETTINGS, ...await this.loadData() };
@@ -3498,7 +3514,7 @@ var PenCanvasPlugin = class extends import_obsidian2.Plugin {
     await this.saveData(this.settings);
   }
 };
-var PenCanvasSettingTab = class extends import_obsidian2.PluginSettingTab {
+var PenCanvasSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -3510,57 +3526,57 @@ var PenCanvasSettingTab = class extends import_obsidian2.PluginSettingTab {
     const save = () => {
       void this.plugin.saveSettings();
     };
-    new import_obsidian2.Setting(containerEl).setName(tr("\u754C\u9762\u8BED\u8A00", "Language")).setDesc(tr("\u9ED8\u8BA4\u8DDF\u968F Obsidian \u7684\u8BED\u8A00\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF08\u547D\u4EE4\u540D\u8981\u91CD\u542F Obsidian\uFF09\u3002", "Follows Obsidian's language by default. Applies to canvases opened afterwards (command names after restarting Obsidian).")).addDropdown((d2) => d2.addOption("auto", tr("\u8DDF\u968F Obsidian", "Follow Obsidian")).addOption("zh", "\u4E2D\u6587").addOption("en", "English").setValue(s2.lang).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u754C\u9762\u8BED\u8A00", "Language")).setDesc(tr("\u9ED8\u8BA4\u8DDF\u968F Obsidian \u7684\u8BED\u8A00\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF08\u547D\u4EE4\u540D\u8981\u91CD\u542F Obsidian\uFF09\u3002", "Follows Obsidian's language by default. Applies to canvases opened afterwards (command names after restarting Obsidian).")).addDropdown((d2) => d2.addOption("auto", tr("\u8DDF\u968F Obsidian", "Follow Obsidian")).addOption("zh", "\u4E2D\u6587").addOption("en", "English").setValue(s2.lang).onChange((v2) => {
       s2.lang = v2;
       setLang(s2.lang);
       save();
       this.display();
     }));
     containerEl.createEl("p", { text: tr("\u7B14\u8FF9\u53C2\u6570\u53EA\u5F71\u54CD\u4E4B\u540E\u753B\u7684\u65B0\u7B14\u753B\uFF1B\u65E7\u7B14\u753B\u6309\u5404\u81EA\u4FDD\u5B58\u7684\u53C2\u6570\u6E32\u67D3\uFF0C\u6240\u4EE5\u5728\u7535\u8111\u548C\u5E73\u677F\u4E0A\u770B\u8D77\u6765\u4E00\u81F4\u3002", "Stroke settings only affect new strokes. Existing strokes keep the settings they were drawn with, so they look the same on every device.") });
-    new import_obsidian2.Setting(containerEl).setName(tr("\u5DE6\u624B\u6A21\u5F0F", "Left-hand mode")).setDesc(tr("\u5706\u76D8\u5185\u5708\u7684\u6309\u952E\u5DE6\u53F3\u955C\u50CF\uFF08\u4F4D\u7F6E\u548C\u5916\u5708\u6ED1\u6761\u4E0D\u53D8\uFF09\u3002\u4E5F\u53EF\u4EE5\u5728\u5706\u76D8\u201C\xB7\xB7\xB7\u201D\u83DC\u5355\u91CC\u5207\u6362\u3002", `Mirrors the keys of the disc menu left to right (its position and the outer sliders stay). Also in the disc's "\xB7\xB7\xB7" menu.`)).addToggle((t2) => t2.setValue(s2.leftHand).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u5DE6\u624B\u6A21\u5F0F", "Left-hand mode")).setDesc(tr("\u5706\u76D8\u5185\u5708\u7684\u6309\u952E\u5DE6\u53F3\u955C\u50CF\uFF08\u4F4D\u7F6E\u548C\u5916\u5708\u6ED1\u6761\u4E0D\u53D8\uFF09\u3002\u4E5F\u53EF\u4EE5\u5728\u5706\u76D8\u201C\xB7\xB7\xB7\u201D\u83DC\u5355\u91CC\u5207\u6362\u3002", `Mirrors the keys of the disc menu left to right (its position and the outer sliders stay). Also in the disc's "\xB7\xB7\xB7" menu.`)).addToggle((t2) => t2.setValue(s2.leftHand).onChange((v2) => {
       void this.plugin.setLeftHand(v2);
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u53EA\u7528\u7B14\u753B\u753B", "Draw with pen only")).setDesc(tr("\u5F00\u542F\u540E\u624B\u6307\u53EA\u7528\u6765\u5E73\u79FB/\u7F29\u653E\uFF0C\u7B14\u624D\u753B\u753B\uFF08\u9632\u8BEF\u89E6\uFF09\u3002", "Fingers only pan and zoom; only the pen draws (avoids accidental marks).")).addToggle((t2) => t2.setValue(s2.penOnly).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u53EA\u7528\u7B14\u753B\u753B", "Draw with pen only")).setDesc(tr("\u5F00\u542F\u540E\u624B\u6307\u53EA\u7528\u6765\u5E73\u79FB/\u7F29\u653E\uFF0C\u7B14\u624D\u753B\u753B\uFF08\u9632\u8BEF\u89E6\uFF09\u3002", "Fingers only pan and zoom; only the pen draws (avoids accidental marks).")).addToggle((t2) => t2.setValue(s2.penOnly).onChange((v2) => {
       s2.penOnly = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u538B\u611F\u53D8\u7EC6\u7A0B\u5EA6 (thinning)", "Pressure thinning")).setDesc(tr("0 = \u4E0D\u53D7\u538B\u529B\u5F71\u54CD\uFF0C1 = \u53D8\u5316\u6700\u5927\u3002", "0 = width ignores pressure, 1 = strongest effect.")).addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(s2.thinning).setDynamicTooltip().onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u538B\u611F\u53D8\u7EC6\u7A0B\u5EA6 (thinning)", "Pressure thinning")).setDesc(tr("0 = \u4E0D\u53D7\u538B\u529B\u5F71\u54CD\uFF0C1 = \u53D8\u5316\u6700\u5927\u3002", "0 = width ignores pressure, 1 = strongest effect.")).addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(s2.thinning).onChange((v2) => {
       s2.thinning = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u538B\u611F\u66F2\u7EBF", "Pressure curve")).setDesc(tr("<1 \u8F7B\u538B\u5C31\u7C97\uFF0C>1 \u8981\u7528\u529B\u624D\u7C97\u3002", "Below 1: light pressure already gives thick lines. Above 1: press harder for thick lines.")).addSlider((sl) => sl.setLimits(0.3, 2.5, 0.05).setValue(s2.pressureGamma).setDynamicTooltip().onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u538B\u611F\u66F2\u7EBF", "Pressure curve")).setDesc(tr("<1 \u8F7B\u538B\u5C31\u7C97\uFF0C>1 \u8981\u7528\u529B\u624D\u7C97\u3002", "Below 1: light pressure already gives thick lines. Above 1: press harder for thick lines.")).addSlider((sl) => sl.setLimits(0.3, 2.5, 0.05).setValue(s2.pressureGamma).onChange((v2) => {
       s2.pressureGamma = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u8F6E\u5ED3\u5E73\u6ED1 (smoothing)", "Edge smoothing")).addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(s2.smoothing).setDynamicTooltip().onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u8F6E\u5ED3\u5E73\u6ED1 (smoothing)", "Edge smoothing")).addSlider((sl) => sl.setLimits(0, 1, 0.05).setValue(s2.smoothing).onChange((v2) => {
       s2.smoothing = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u9632\u6296 (streamline)", "Stabilizer (streamline)")).setDesc(tr("\u8D8A\u5927\u8D8A\u987A\uFF0C\u4F46\u7B14\u8FF9\u4F1A\u66F4\u660E\u663E\u5730\u843D\u540E\u7B14\u5C16\u3002", "Higher is smoother, but the line trails further behind the pen tip.")).addSlider((sl) => sl.setLimits(0, 0.9, 0.05).setValue(s2.streamline).setDynamicTooltip().onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u9632\u6296 (streamline)", "Stabilizer (streamline)")).setDesc(tr("\u8D8A\u5927\u8D8A\u987A\uFF0C\u4F46\u7B14\u8FF9\u4F1A\u66F4\u660E\u663E\u5730\u843D\u540E\u7B14\u5C16\u3002", "Higher is smoother, but the line trails further behind the pen tip.")).addSlider((sl) => sl.setLimits(0, 0.9, 0.05).setValue(s2.streamline).onChange((v2) => {
       s2.streamline = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u7B14\u5C16\u9884\u6D4B", "Pen tip prediction")).setDesc(tr("\u7528 getPredictedEvents \u63D0\u524D\u753B\u4E00\u5C0F\u6BB5\uFF0C\u51CF\u5C11\u89C6\u89C9\u5EF6\u8FDF\uFF1B\u62AC\u7B14\u540E\u9884\u6D4B\u90E8\u5206\u88AB\u4E22\u5F03\u3002", "Draws a short predicted piece ahead of the pen (getPredictedEvents) to hide latency. The prediction is dropped when you lift the pen.")).addToggle((t2) => t2.setValue(s2.prediction).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u7B14\u5C16\u9884\u6D4B", "Pen tip prediction")).setDesc(tr("\u7528 getPredictedEvents \u63D0\u524D\u753B\u4E00\u5C0F\u6BB5\uFF0C\u51CF\u5C11\u89C6\u89C9\u5EF6\u8FDF\uFF1B\u62AC\u7B14\u540E\u9884\u6D4B\u90E8\u5206\u88AB\u4E22\u5F03\u3002", "Draws a short predicted piece ahead of the pen (getPredictedEvents) to hide latency. The prediction is dropped when you lift the pen.")).addToggle((t2) => t2.setValue(s2.prediction).onChange((v2) => {
       s2.prediction = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u4F4E\u5EF6\u8FDF\u753B\u5E03 (desynchronized)", "Low-latency canvas (desynchronized)")).setDesc(tr("\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\u3002\u82E5\u51FA\u73B0\u6495\u88C2\u6216\u95EA\u70C1\u53EF\u5173\u95ED\u3002", "Applies after reopening the canvas. Turn off if you see tearing or flicker.")).addToggle((t2) => t2.setValue(s2.desynchronized).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u4F4E\u5EF6\u8FDF\u753B\u5E03 (desynchronized)", "Low-latency canvas (desynchronized)")).setDesc(tr("\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\u3002\u82E5\u51FA\u73B0\u6495\u88C2\u6216\u95EA\u70C1\u53EF\u5173\u95ED\u3002", "Applies after reopening the canvas. Turn off if you see tearing or flicker.")).addToggle((t2) => t2.setValue(s2.desynchronized).onChange((v2) => {
       s2.desynchronized = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u5BF9\u9F50\u5438\u9644", "Snapping")).setDesc(tr("\u753B\u5F62\u72B6\u3001\u79FB\u52A8\u9009\u4E2D\u5185\u5BB9\u65F6\uFF0C\u5438\u9644\u5230\u5176\u4ED6\u5F62\u72B6\u7684\u8FB9\u548C\u4E2D\u7EBF\u5E76\u663E\u793A\u53C2\u8003\u7EBF\uFF08\u624B\u5199\u7B14\u753B\u4E0D\u53C2\u4E0E\uFF09\u3002\u62D6\u692D\u5706/\u77E9\u5F62\u65F6\u4F1A\u5728 1:1\u30014:3\u30012:1 \u7B49\u6BD4\u4F8B\u505C\u4E00\u4E0B\uFF0C\u76F4\u7EBF/\u7BAD\u5934\u5728 45\xB0 \u500D\u6570\u505C\u4E00\u4E0B\u3002", "When drawing shapes or moving a selection, snap to the edges and centre lines of other shapes and show guides (handwriting is ignored). Ellipses and rectangles pause at 1:1, 4:3, 2:1 and similar ratios; lines and arrows at multiples of 45\xB0.")).addToggle((t2) => t2.setValue(s2.snap).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u5BF9\u9F50\u5438\u9644", "Snapping")).setDesc(tr("\u753B\u5F62\u72B6\u3001\u79FB\u52A8\u9009\u4E2D\u5185\u5BB9\u65F6\uFF0C\u5438\u9644\u5230\u5176\u4ED6\u5F62\u72B6\u7684\u8FB9\u548C\u4E2D\u7EBF\u5E76\u663E\u793A\u53C2\u8003\u7EBF\uFF08\u624B\u5199\u7B14\u753B\u4E0D\u53C2\u4E0E\uFF09\u3002\u62D6\u692D\u5706/\u77E9\u5F62\u65F6\u4F1A\u5728 1:1\u30014:3\u30012:1 \u7B49\u6BD4\u4F8B\u505C\u4E00\u4E0B\uFF0C\u76F4\u7EBF/\u7BAD\u5934\u5728 45\xB0 \u500D\u6570\u505C\u4E00\u4E0B\u3002", "When drawing shapes or moving a selection, snap to the edges and centre lines of other shapes and show guides (handwriting is ignored). Ellipses and rectangles pause at 1:1, 4:3, 2:1 and similar ratios; lines and arrows at multiples of 45\xB0.")).addToggle((t2) => t2.setValue(s2.snap).onChange((v2) => {
       s2.snap = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u586B\u5145\u5C01\u53E3\u95F4\u9699\uFF08\u50CF\u7D20\uFF09", "Fill gap tolerance (px)")).setDesc(tr("\u7EBF\u6761\u4E4B\u95F4\u5C0F\u4E8E\u8FD9\u4E2A\u8DDD\u79BB\u7684\u7F3A\u53E3\uFF0C\u586B\u5145\u65F6\u5F53\u4F5C\u5C01\u95ED\u30020 = \u5FC5\u987B\u5B8C\u5168\u5C01\u53E3\u3002", "Gaps between lines smaller than this count as closed when filling. 0 = the area must be fully closed.")).addSlider((sl) => sl.setLimits(0, 20, 1).setValue(s2.fillGap).setDynamicTooltip().onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u586B\u5145\u5C01\u53E3\u95F4\u9699\uFF08\u50CF\u7D20\uFF09", "Fill gap tolerance (px)")).setDesc(tr("\u7EBF\u6761\u4E4B\u95F4\u5C0F\u4E8E\u8FD9\u4E2A\u8DDD\u79BB\u7684\u7F3A\u53E3\uFF0C\u586B\u5145\u65F6\u5F53\u4F5C\u5C01\u95ED\u30020 = \u5FC5\u987B\u5B8C\u5168\u5C01\u53E3\u3002", "Gaps between lines smaller than this count as closed when filling. 0 = the area must be fully closed.")).addSlider((sl) => sl.setLimits(0, 20, 1).setValue(s2.fillGap).onChange((v2) => {
       s2.fillGap = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("GPU \u6E32\u67D3\u586B\u5145 (WebGL)", "GPU fills (WebGL)")).setDesc(tr("\u586B\u5145\u7528\u663E\u5361\u7ED8\u5236\uFF0C\u5927\u91CF\u56FE\u6848\u586B\u5145\u65F6\u66F4\u6D41\u7545\u3001\u653E\u5927\u4E0D\u7CCA\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF1B\u82E5\u663E\u793A\u5F02\u5E38\u53EF\u5173\u95ED\uFF0C\u6539\u56DE\u539F\u6765\u7684\u65B9\u5F0F\u3002", "Draws fills on the GPU: smoother with many pattern fills and sharp when zoomed. Applies after reopening the canvas; turn off if fills look wrong.")).addToggle((t2) => t2.setValue(s2.glFill).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("GPU \u6E32\u67D3\u586B\u5145 (WebGL)", "GPU fills (WebGL)")).setDesc(tr("\u586B\u5145\u7528\u663E\u5361\u7ED8\u5236\uFF0C\u5927\u91CF\u56FE\u6848\u586B\u5145\u65F6\u66F4\u6D41\u7545\u3001\u653E\u5927\u4E0D\u7CCA\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF1B\u82E5\u663E\u793A\u5F02\u5E38\u53EF\u5173\u95ED\uFF0C\u6539\u56DE\u539F\u6765\u7684\u65B9\u5F0F\u3002", "Draws fills on the GPU: smoother with many pattern fills and sharp when zoomed. Applies after reopening the canvas; turn off if fills look wrong.")).addToggle((t2) => t2.setValue(s2.glFill).onChange((v2) => {
       s2.glFill = v2;
       save();
     }));
-    new import_obsidian2.Setting(containerEl).setName(tr("\u65B0\u753B\u5E03\u9ED8\u8BA4\u80CC\u666F\u8272", "Default background for new canvases")).setDesc(tr("\u9ED8\u8BA4\u8DDF\u968F\u4E3B\u9898\uFF08\u6697\u8272\u4E3B\u9898\u9ED1\u5E95\u3001\u4EAE\u8272\u4E3B\u9898\u767D\u5E95\uFF09\uFF1B\u5728\u753B\u5E03\u91CC\u9009\u8FC7\u80CC\u666F\u8272\u540E\u4F1A\u8BB0\u4F4F\u4E0A\u6B21\u7684\u9009\u62E9\u3002", "Follows the theme by default (dark theme: black, light theme: white). Once you pick a background in a canvas, that choice is remembered.")).addColorPicker((c2) => c2.setValue(this.plugin.newBackground()).onChange((v2) => {
+    new import_obsidian3.Setting(containerEl).setName(tr("\u65B0\u753B\u5E03\u9ED8\u8BA4\u80CC\u666F\u8272", "Default background for new canvases")).setDesc(tr("\u9ED8\u8BA4\u8DDF\u968F\u4E3B\u9898\uFF08\u6697\u8272\u4E3B\u9898\u9ED1\u5E95\u3001\u4EAE\u8272\u4E3B\u9898\u767D\u5E95\uFF09\uFF1B\u5728\u753B\u5E03\u91CC\u9009\u8FC7\u80CC\u666F\u8272\u540E\u4F1A\u8BB0\u4F4F\u4E0A\u6B21\u7684\u9009\u62E9\u3002", "Follows the theme by default (dark theme: black, light theme: white). Once you pick a background in a canvas, that choice is remembered.")).addColorPicker((c2) => c2.setValue(this.plugin.newBackground()).onChange((v2) => {
       s2.defaultBackground = v2;
       s2.bgChosen = true;
       save();
