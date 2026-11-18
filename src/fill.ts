@@ -15,7 +15,7 @@ export function bucketRegion(items: Item[], vb: BBox, scale: number, wx: number,
 	let k = scale; // cells per world unit (1 cell per screen pixel)
 	let W = Math.ceil((vb.x1 - vb.x0) * k), H = Math.ceil((vb.y1 - vb.y0) * k);
 	if (W * H > MAX_CELLS) { const f = Math.sqrt(MAX_CELLS / (W * H)); k *= f; W = Math.ceil(W * f); H = Math.ceil(H * f); }
-	const cv = document.createElement('canvas');
+	const cv = createEl('canvas');
 	cv.width = W; cv.height = H;
 	const ctx = cv.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
 	ctx.setTransform(k, 0, 0, k, -vb.x0 * k, -vb.y0 * k);
@@ -80,8 +80,9 @@ function traceRings(m: Uint8Array, W: number, H: number): P2[][] {
 	const adj = new Map<number, number[]>();
 	const pos = new Map<number, P2>();
 	const link = (a: number, b: number) => {
-		(adj.get(a) ?? adj.set(a, []).get(a) as number[]).push(b);
-		(adj.get(b) ?? adj.set(b, []).get(b) as number[]).push(a);
+		const la = adj.get(a), lb = adj.get(b);
+		if (la) la.push(b); else adj.set(a, [b]);
+		if (lb) lb.push(a); else adj.set(b, [a]);
 	};
 	for (let y = -1; y < H; y++) for (let x = -1; x < W; x++) {
 		const c = (at(x, y) << 3) | (at(x + 1, y) << 2) | (at(x + 1, y + 1) << 1) | at(x, y + 1);

@@ -1,3 +1,4 @@
+import { Lang, tr } from './i18n';
 export type Pt = [number, number, number]; // x, y, pressure (world coords)
 
 export interface StrokeItem {
@@ -48,8 +49,9 @@ export interface PolygonItem {
 export type Item = StrokeItem | ShapeItem | PolygonItem;
 
 export type FillStyle = 'solid' | 'hatch' | 'cross' | 'dots' | 'stipple';
-export const FILL_STYLES: [FillStyle, string][] = [
-	['solid', '实心'], ['hatch', '斜线'], ['cross', '网格线'], ['dots', '圆点'], ['stipple', '电子云（随机点）'],
+export const fillStyles = (): [FillStyle, string][] => [
+	['solid', tr('实心', 'Solid')], ['hatch', tr('斜线', 'Hatch')], ['cross', tr('网格线', 'Crosshatch')],
+	['dots', tr('圆点', 'Dots')], ['stipple', tr('电子云（随机点）', 'Stipple (random dots)')],
 ];
 
 export interface CanvasDoc {
@@ -73,8 +75,11 @@ export interface PenSettings {
 	leftHand: boolean;
 	fillGap: number;
 	glFill: boolean; // draw fills with WebGL (falls back to 2D when unavailable)
-	hubX: number; // menu disc position as a fraction of the free space (right-hand; mirrored in left-hand mode)
+	hubX: number; // menu disc position as a fraction of the free space
 	hubY: number;
+	recentColors: string[]; // last custom colours, newest first (max 3), shown in the fan's custom column
+	lastShape: ShapeKind; // shown on the hub's shape key
+	lang: Lang; // interface language: auto follows Obsidian
 }
 
 export const DEFAULT_SETTINGS: PenSettings = {
@@ -93,12 +98,15 @@ export const DEFAULT_SETTINGS: PenSettings = {
 	glFill: true,
 	hubX: 0,
 	hubY: 0,
+	recentColors: [],
+	lastShape: 'rect',
+	lang: 'auto',
 };
 
 // Obsidian's default accent palette (light-theme values) plus neutrals.
 export const PALETTE: [string, string][] = [
-	['黑', '#1e1e1e'], ['灰', '#8a8a8a'], ['白', '#ffffff'],
-	['红', '#e93147'], ['橙', '#ec7500'], ['黄', '#e0ac00'], ['绿', '#08b94e'],
-	['青', '#00bfbc'], ['蓝', '#086ddd'], ['紫', '#7852ee'], ['粉', '#d53984'],
+	['Black', '#1e1e1e'], ['Grey', '#8a8a8a'], ['White', '#ffffff'],
+	['Red', '#e93147'], ['Orange', '#ec7500'], ['Yellow', '#e0ac00'], ['Green', '#08b94e'],
+	['Cyan', '#00bfbc'], ['Blue', '#086ddd'], ['Purple', '#7852ee'], ['Pink', '#d53984'],
 ];
 export const OPACITIES = [1, 0.75, 0.5, 0.3, 0.15];

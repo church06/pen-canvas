@@ -117,15 +117,17 @@ function parseColor(c: string): [number, number, number, number] {
 	const hit = colorCache.get(c);
 	if (hit) return hit;
 	if (!colorCtx) {
-		const cv = document.createElement('canvas');
+		const cv = createEl('canvas');
 		cv.width = cv.height = 1;
-		colorCtx = cv.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+		colorCtx = cv.getContext('2d', { willReadFrequently: true });
 	}
-	colorCtx.clearRect(0, 0, 1, 1);
-	colorCtx.fillStyle = '#000';
-	colorCtx.fillStyle = c;
-	colorCtx.fillRect(0, 0, 1, 1);
-	const d = colorCtx.getImageData(0, 0, 1, 1).data;
+	const ctx = colorCtx;
+	if (!ctx) return [0, 0, 0, 1];
+	ctx.clearRect(0, 0, 1, 1);
+	ctx.fillStyle = '#000';
+	ctx.fillStyle = c;
+	ctx.fillRect(0, 0, 1, 1);
+	const d = ctx.getImageData(0, 0, 1, 1).data;
 	const v: [number, number, number, number] = [d[0] / 255, d[1] / 255, d[2] / 255, d[3] / 255]; // straight (not premultiplied) alpha
 	if (colorCache.size > 256) colorCache.clear();
 	colorCache.set(c, v);
@@ -163,7 +165,7 @@ export class GLFillLayer {
 			if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? 'shader');
 			return s;
 		};
-		const p = gl.createProgram() as WebGLProgram;
+		const p = gl.createProgram();
 		gl.attachShader(p, sh(gl.VERTEX_SHADER, VS));
 		gl.attachShader(p, sh(gl.FRAGMENT_SHADER, FS));
 		gl.linkProgram(p);
@@ -171,7 +173,7 @@ export class GLFillLayer {
 		this.prog = p;
 		for (const n of ['u_scale', 'u_off', 'u_shift', 'u_color', 'u_style', 'u_tile', 'u_px']) this.loc[n] = gl.getUniformLocation(p, n);
 		this.aPos = gl.getAttribLocation(p, 'a_pos');
-		this.buf = gl.createBuffer() as WebGLBuffer;
+		this.buf = gl.createBuffer();
 		gl.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; });
 	}
 

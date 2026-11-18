@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { getStroke } from 'perfect-freehand';
 import { CanvasDoc, FillStyle, Item, PolygonItem, Pt, ShapeItem, StrokeItem } from './types';
 
@@ -198,7 +199,7 @@ function paintTiles(t: CanvasRenderingContext2D, sp: TileSpec, r: BBox): void {
 function fillPattern(ctx: CanvasRenderingContext2D, color: string, sp: TileSpec, key: string): CanvasPattern | string {
 	const hit = patterns.get(key);
 	if (hit) return hit.pat;
-	const cv = document.createElement('canvas');
+	const cv = createEl('canvas');
 	cv.width = cv.height = Math.ceil(sp.size * sp.res);
 	const t = cv.getContext('2d') as CanvasRenderingContext2D;
 	t.scale(sp.res, sp.res);
@@ -232,7 +233,7 @@ function patternFill(ctx: CanvasRenderingContext2D, it: Item, clip: Path2D, rule
 		// Reuse the oldest layer's canvas (layers for an old view are never needed again).
 		let cv: HTMLCanvasElement | undefined;
 		if (screens.size >= 6) { const k0 = screens.keys().next().value as string; cv = screens.get(k0)?.cv; screens.delete(k0); }
-		cv ??= document.createElement('canvas');
+		cv ??= createEl('canvas');
 		if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
 		const t = cv.getContext('2d') as CanvasRenderingContext2D;
 		t.setTransform(1, 0, 0, 1, 0, 0);
@@ -440,7 +441,7 @@ export function emptyDoc(bg: string): CanvasDoc {
 export function parseDoc(text: string): CanvasDoc | null {
 	if (!text.trim()) return null;
 	const raw = JSON.parse(text) as Partial<CanvasDoc>;
-	if (raw.type !== 'pen-canvas' || !Array.isArray(raw.items)) throw new Error('不是 pen-canvas 文件');
+	if (raw.type !== 'pen-canvas' || !Array.isArray(raw.items)) throw new Error(tr('不是 pen-canvas 文件', 'Not a pen-canvas file'));
 	const items = raw.items.filter((i: Item) => i && typeof i === 'object' && typeof i.type === 'string' &&
 		(i.type === 'stroke' || i.type === 'polygon' ? Array.isArray(i.points) && i.points.length > 0 : ['rect', 'ellipse', 'line', 'arrow'].includes(i.type)));
 	for (const i of items) {
