@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFolder, normalizePath, requireApiVersion } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFolder, normalizePath } from 'obsidian';
 import { DARK_BG, EXT, PenCanvasView, VIEW_TYPE } from './view';
 import { DEFAULT_SETTINGS, PenSettings } from './types';
 import { emptyDoc, serialize } from './geometry';
@@ -92,7 +92,7 @@ function rows(): Row[] {
 }
 
 const langName = () => tr('界面语言', 'Language');
-const langDesc = () => tr('默认跟随 Obsidian 的语言。重新打开画布后生效（命令名要重启 Obsidian）。', 'Follows Obsidian\'s language by default. Applies to canvases opened afterwards (command names after restarting Obsidian).');
+const langDesc = () => tr('默认跟随 Obsidian 的语言。重新打开画布后生效（命令名要重启 Obsidian）；设置页若没立即切换，重新打开即可。', 'Follows Obsidian\'s language by default. Applies to canvases opened afterwards (command names after restarting Obsidian). If this page does not switch right away, reopen it.');
 const langOptions = (): Record<string, string> => ({ auto: tr('跟随 Obsidian', 'Follow Obsidian'), zh: '中文', en: 'English' });
 const noteName = () => tr('笔迹参数只影响之后画的新笔画', 'Stroke settings only affect new strokes');
 const noteDesc = () => tr('旧笔画按各自保存的参数渲染，所以在电脑和平板上看起来一致。', 'Existing strokes keep the settings they were drawn with, so they look the same on every device.');
@@ -138,7 +138,9 @@ class PenCanvasSettingTab extends PluginSettingTab {
 
 	getControlValue(key: string): unknown { return (this.plugin.settings as unknown as Record<string, unknown>)[key]; }
 
-	setControlValue(key: string, value: unknown): void { if (this.apply(key, value) && requireApiVersion('1.13.0')) this.update(); }
+	// No update() here: it only exists on 1.13+, and the review bot rejects it at minAppVersion 1.8.7. A language change
+	// relabels this page the next time it is opened.
+	setControlValue(key: string, value: unknown): void { this.apply(key, value); }
 
 	// Obsidian older than 1.13: imperative fallback with the same rows.
 	display(): void { this.build(); }

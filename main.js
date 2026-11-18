@@ -3530,7 +3530,7 @@ function rows() {
   ];
 }
 var langName = () => tr("\u754C\u9762\u8BED\u8A00", "Language");
-var langDesc = () => tr("\u9ED8\u8BA4\u8DDF\u968F Obsidian \u7684\u8BED\u8A00\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF08\u547D\u4EE4\u540D\u8981\u91CD\u542F Obsidian\uFF09\u3002", "Follows Obsidian's language by default. Applies to canvases opened afterwards (command names after restarting Obsidian).");
+var langDesc = () => tr("\u9ED8\u8BA4\u8DDF\u968F Obsidian \u7684\u8BED\u8A00\u3002\u91CD\u65B0\u6253\u5F00\u753B\u5E03\u540E\u751F\u6548\uFF08\u547D\u4EE4\u540D\u8981\u91CD\u542F Obsidian\uFF09\uFF1B\u8BBE\u7F6E\u9875\u82E5\u6CA1\u7ACB\u5373\u5207\u6362\uFF0C\u91CD\u65B0\u6253\u5F00\u5373\u53EF\u3002", "Follows Obsidian's language by default. Applies to canvases opened afterwards (command names after restarting Obsidian). If this page does not switch right away, reopen it.");
 var langOptions = () => ({ auto: tr("\u8DDF\u968F Obsidian", "Follow Obsidian"), zh: "\u4E2D\u6587", en: "English" });
 var noteName = () => tr("\u7B14\u8FF9\u53C2\u6570\u53EA\u5F71\u54CD\u4E4B\u540E\u753B\u7684\u65B0\u7B14\u753B", "Stroke settings only affect new strokes");
 var noteDesc = () => tr("\u65E7\u7B14\u753B\u6309\u5404\u81EA\u4FDD\u5B58\u7684\u53C2\u6570\u6E32\u67D3\uFF0C\u6240\u4EE5\u5728\u7535\u8111\u548C\u5E73\u677F\u4E0A\u770B\u8D77\u6765\u4E00\u81F4\u3002", "Existing strokes keep the settings they were drawn with, so they look the same on every device.");
@@ -3585,8 +3585,10 @@ var PenCanvasSettingTab = class extends import_obsidian3.PluginSettingTab {
   getControlValue(key) {
     return this.plugin.settings[key];
   }
+  // No update() here: it only exists on 1.13+, and the review bot rejects it at minAppVersion 1.8.7. A language change
+  // relabels this page the next time it is opened.
   setControlValue(key, value) {
-    if (this.apply(key, value) && (0, import_obsidian3.requireApiVersion)("1.13.0")) this.update();
+    this.apply(key, value);
   }
   // Obsidian older than 1.13: imperative fallback with the same rows.
   display() {
