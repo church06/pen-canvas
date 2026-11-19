@@ -3,13 +3,13 @@
 An infinite canvas for handwriting in Obsidian, for desktop and Android tablets (S Pen pressure supported).
 
 - **New canvas**: right-click a folder → *New pen canvas*, the ribbon pen icon, or the command *New pen canvas*. Files end in `.pencanvas`.
-- **Disc menu** (no toolbar): drag the top (dotted) or bottom handle to move the disc; tap the bottom "···" for settings (canvas background, fit all, left-hand mode).
+- **Disc menu** (no toolbar): two handles sit on the outer ring at the top and bottom ends of the helper zone; drag either to move the disc; tap the bottom "···" for settings (canvas background, fit all, left-hand mode).
   - Centre: shows the current tool; tap for *Pan*, tap again for the previous tool.
-  - Work keys: *Color / opacity*, *Pen*, *Select / move*, *Eraser* (removes whole strokes), *Fill* (opens the pattern panel), *Shapes*. Select and Eraser go back to the previous tool when tapped again. The Shapes key shows the last shape; tap it again while a shape is active to open the drawer with *Rectangle*, *Ellipse*, *Line* and *Arrow*.
+  - *Color / opacity* sits alone at the top, filled with the current color. Work keys: *Pen*, *Select / move*, *Eraser* (removes every item its circle touches, line or fill, as a whole; with a selection, tapping it deletes the selection), *Fill* (opens the pattern panel), *Shapes*. Select and Eraser go back to the previous tool when tapped again. While the eraser is active, the size slider sets the eraser size (6–100 px) instead of the line width. The Shapes key shows the last shape; tap it again while a shape is active to open the drawer with *Rectangle*, *Ellipse*, *Line* and *Arrow*.
   - Helper keys: *Undo*, *Redo*, *Copy selection*, *Paste*.
-  - Outer ring: left arc sets the size, right arc the opacity.
+  - Outer ring, on the work-zone side: the upper arc sets the size (larger towards the middle), the lower arc the opacity (larger towards the middle). They are dimmed with the select tool when nothing is selected.
   - *Left-hand mode* mirrors the keys only.
-- **Color fan**: 15 hues × 4 shades with hex codes, plus your last 3 custom colors. Drag or scroll to turn it.
+- **Color fan**: 15 hues × 4 shades with hex codes, plus your last 3 custom colors. Drag or scroll to turn it. *Custom* opens a picker with a saturation/brightness square, a hue bar and HEX / RGB / HSB fields.
 - **Fill**: tap inside a closed area; styles *Solid*, *Hatch*, *Crosshatch*, *Dots*, *Stipple* with a density slider. Small gaps (default 5 px) still count as closed.
 - **Snapping**: shapes and moved selections snap to other shapes' edges and centres; ellipses/rectangles pause at 1:1, 4:3, 2:1…, lines at multiples of 45°.
 - **Touch and keys**: one finger pans, two fingers zoom (with *Draw with pen only*). Mouse: left draws, middle or wheel pans, Ctrl+wheel zooms. Ctrl+Z / Ctrl+Shift+Z, Ctrl+C / X / V, Ctrl+D duplicates, Delete removes the selection.
@@ -41,10 +41,10 @@ Obsidian 无限画布 + 手写插件。电脑和安卓平板都能用。
 ## 用法
 - 文件列表右键「新建手写画布」（在该文件夹里建），或左侧功能区「笔」图标、命令「新建手写画布」：新建 `手写画布.pencanvas`。
 - 选择工具：点在线条上选中这一个（最上层优先，未填充的形状只在线上才算点中，所以嵌套时能只选外圈），按住直接拖动；Shift+点击加选；在空白处拖框，框碰到元素的线条就选中（只框外圈的一段线就只选外圈）。
-- 橡皮：线条和填充分开擦。碰到线条只擦线条，填充保留；在填充内部（离开线条）擦，只擦填充。
-- 工具：笔、橡皮（整笔擦除）、框选/移动、平移、矩形、椭圆、直线、箭头。
-- 圆盘菜单（参考 Concepts）：没有顶部工具栏，一个可拖动的圆盘。上下两端的手柄拖动可移动圆盘（位置会记住）；上面是 3×2 点阵（拖动用），下面是“···”，轻点打开设置菜单（画布背景、显示全部、左手模式）。中心显示当前工具，点一下切到平移，再点回到上一个工具。中间一圈是 10 个 36° 的扇形按键：紫色工作区从正上方起顺时针是颜色、笔、框选、橡皮、填充（点开图案面板）、形状（正下方，显示上次用的形状，角上的小三角（在工作区那一侧，左手模式在左下）表示里面还有别的形状；形状已选中时再点一次，工作区会像抽屉一样换成矩形、椭圆、直线、箭头四个大键，选完、点中心或点画布自动收回），框选/橡皮再点一次回到上一个工具；青色辅助区居中在左侧，从上到下撤销、重做、复制、粘贴。分三组：工作区、撤销/重做、复制/粘贴，组与组之间留一道缝，组内按键之间不分隔。左手模式只把这一圈左右镜像，圆盘位置和外圈滑条不变。最外圈左弧拖动调粗细，右弧调透明度。点颜色弹出扇形色板（15 列 × 4 档 + 自定义，每格标色号；自定义那一列外面三格是最近用过的 3 个自定义色，没有就空着），色块之间无边框紧挨着；沿扇形拖动（松手后带惯性）或滚轮可以转动。
-- 颜色（Obsidian 默认调色板 + 自定义）、透明度（滑条或直接输入百分比）。画笔圆点按钮打开圆环：左弧调粗细，右弧调透明度。
+- 橡皮：像绘图软件一样只看橡皮圆圈的范围，圆圈边缘碰到的线条或填充，整笔（连同它的填充）删掉。橡皮大小用圆盘的粗细滑条调（选中橡皮时粗细滑条变成橡皮大小，6–100 px）。有选中内容时点橡皮键，直接删除选中。
+- 工具：笔、橡皮（整笔擦除；有选中时点它删除选中）、框选/移动、平移、矩形、椭圆、直线、箭头。
+- 圆盘菜单（参考 Concepts）：没有顶部工具栏，一个可拖动的圆盘。辅助区外侧上下两端各有一个手柄（和辅助区上下边缘对齐），拖动可移动圆盘（位置会记住）；上面是 3×2 点阵（拖动用），下面是“···”，轻点打开设置菜单（画布背景、显示全部、左手模式）。中心显示当前工具，点一下切到平移，再点回到上一个工具。中间一圈是 10 个 36° 的扇形按键：正上方是单独的颜色键（整个键铺满当前颜色）；紫色工作区从它右边起顺时针是笔、框选、橡皮、填充（点开图案面板）、形状（正下方，显示上次用的形状，角上的小三角（在工作区那一侧，左手模式在左下）表示里面还有别的形状；形状已选中时再点一次，笔到形状这一段会像抽屉一样换成矩形、椭圆、直线、箭头四个大键，选完、点中心或点画布自动收回），框选/橡皮再点一次回到上一个工具；青色辅助区居中在左侧，从上到下撤销、重做、复制、粘贴。分四组：颜色、工作区、撤销/重做、复制/粘贴，组与组之间留一道缝，组内按键之间不分隔。左手模式只把这一圈左右镜像，圆盘位置和外圈滑条不变。最外圈工作区那一侧：上段拖动调粗细（往下变粗），下段调透明度（往上变大），两段在中间留空隔开；辅助区那一侧不放滑条。点颜色弹出扇形色板（15 列 × 4 档 + 自定义，每格标色号；自定义那一列外面三格是最近用过的 3 个自定义色，没有就空着），色块之间无边框紧挨着；沿扇形拖动（松手后带惯性）或滚轮可以转动。
+- 颜色（Obsidian 默认调色板 + 自定义取色器：饱和度/亮度方块、色相条、HEX / RGB / HSB 数值）、透明度（滑条或直接输入百分比）。圆盘外圈工作区那一侧：上段调粗细（往下拖变粗），下段调透明度（往上拖变大）；框选且没选中东西时两条变暗不可用。
 - 复制/粘贴：选中后点菜单里的复制、粘贴按钮，或 Ctrl+C / Ctrl+X / Ctrl+V，Ctrl+D 原地复制一份。可以跨画布粘贴。
 - 填充默认用 WebGL（显卡）绘制：图案逐像素计算，放大不糊、大量填充不卡；缩小到图案比像素还细时淡化成平均灰度，避免闪烁。设置里可关闭（改回 Canvas 2D），WebGL 不可用时自动回退。
 - 画布背景色（BG，色块选择，记住上次的选择）。没选过时跟随主题：暗色主题黑底白笔，亮色主题白底黑笔。

@@ -4,9 +4,10 @@ import { LiveOutline, smoothPath, startCap } from './livestroke';
 import { Modal, Notice, Platform, Scope, TextFileView, WorkspaceLeaf, addIcon, setIcon } from 'obsidian';
 import type PenCanvasPlugin from './main';
 import { tr } from './i18n';
+import { ColorPicker, PickerOptions, dragArea } from './picker';
 import { CanvasDoc, fillStyles, FillStyle, Item, Pt, ShapeItem, ShapeKind, StrokeItem } from './types';
 import {
-	BBox, closedOutline, detachFill, drawFill, hitFill, drawItem, drawLine, drawShape, emptyDoc, hitItem, isFillOnly, pointInPoly, polygonArea, intersects, itemBBox, itemGeomBBox, itemTouchesBox, parseDoc, round, serialize,
+	BBox, closedOutline, drawFill, fillTouchesCircle, drawItem, drawLine, drawShape, emptyDoc, hitItem, isFillOnly, pointInPoly, polygonArea, intersects, itemBBox, itemGeomBBox, itemTouchesBox, parseDoc, round, serialize,
 	strokeOutlinePath, translateItem, uid,
 } from './geometry';
 
@@ -86,7 +87,8 @@ export class PenCanvasView extends TextFileView {
 	private msgEl!: HTMLDivElement;
 	private toolBtns = new Map<Tool, HTMLElement>();
 	private colorBtns: HTMLElement[] = [];
-	private brushBtn!: HTMLElement; // icon (colour dot) of the colour key
+	private brushBtn!: HTMLElement; // icon slot of the colour key (empty: the key itself shows the colour)
+	private brushSwatch: SVGPathElement | null = null; // the current colour, filling the colour key like a button
 	private brushKey!: Element; // the colour key itself (popover anchor)
 	private popovers = new Map<string, { el: HTMLElement; anchor: () => Element; refresh: () => void }>();
 	private leftBtn!: HTMLElement;
@@ -105,8 +107,9 @@ export class PenCanvasView extends TextFileView {
 	private fillStyle: FillStyle = 'solid';
 	private fillDensity = 50; // percent
 	private fillPanel: HTMLElement | null = null;
+	private picker: ColorPicker | null = null;
 	private fillSwatches: HTMLElement[] = [];
-	private densityRange!: HTMLInputElement;
+	private densityRange!: HTMLElement;
 	private densityLabel!: HTMLElement;
 	private opRange!: HTMLInputElement;
 	private opNum!: HTMLInputElement;
@@ -250,6 +253,51 @@ export class PenCanvasView extends TextFileView {
 		el.addEventListener('touchend', (e) => e.stopPropagation(), { passive: true });
 	}
 
+	/**
+	 * Tap = pointerdown and pointerup on the element without moving away. Does not wait for the browser's click,
+	 * which some pen/WebView combinations never send (or send late) for a stylus tap. Clicks right after a handled
+	 * tap are ignored; a click without one (keyboard, synthetic) still works.
+	 */
+	private onTap(el: Element, fn: () => void): void {
+		let down: { id: number; x: number; y: number } | null = null;
+		const on = (type: string, f: (e: PointerEvent) => void) => el.addEventListener(type, (ev) => { const e = ev as PointerEvent; this.hubLog(e); f(e); });
+		on('pointerdown', (e) => {
+			if (e.pointerType === 'mouse' && e.button !== 0) return;
+			down = { id: e.pointerId, x: e.clientX, y: e.clientY };
+		});
+		on('pointerup', (e) => {
+			const d = down;
+			down = null;
+			if (!d || d.id !== e.pointerId || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 16) return;
+			this.swallowClickUntil = performance.now() + 800;
+			this.runTap(fn);
+		});
+		on('pointercancel', () => { down = null; });
+		// The click after a tap is hit-tested where the tap ended, which may now be another key (the shape drawer
+		// slides in under the pen), so it is ignored on every key, not only on the tapped one.
+		// Compared with performance.now(), not event timeStamps: a synthesized click and the pen's pointer events
+		// need not share a time base.
+		on('click', () => { if (performance.now() >= this.swallowClickUntil) this.runTap(fn); else this.hubNote('click ignored'); });
+	}
+	private swallowClickUntil = 0;
+
+	private runTap(fn: () => void): void {
+		try { fn(); } catch (err) { this.hubNote(`error: ${err instanceof Error ? err.message : String(err)}`); throw err; }
+	}
+
+	/** Last pointer events on the disc, shown in the diagnostics (to debug pens that behave differently). */
+	private hubEvents: string[] = [];
+	private hubLog(e: MouseEvent): void {
+		const pe = e as PointerEvent;
+		const t = e.target as Element | null;
+		const cls = (t?.getAttribute?.('class') ?? t?.nodeName ?? '').split(' ')[0];
+		this.hubNote(`${e.type}:${pe.pointerType ?? '-'} b${e.button}/${e.buttons} ${cls}`);
+	}
+	private hubNote(text: string): void {
+		this.hubEvents.push(`${(performance.now() / 1000).toFixed(2)} ${text}`);
+		if (this.hubEvents.length > 20) this.hubEvents.shift();
+	}
+
 	private btn(parent: HTMLElement, icon: string, label: string, onClick: () => void): HTMLElement {
 		const b = parent.createEl('button', { cls: 'pc-btn', attr: { 'aria-label': label } });
 		setIcon(b, icon);
@@ -262,7 +310,7 @@ export class PenCanvasView extends TextFileView {
 	// bottom = min, top = max). The "···" grips at the top and bottom drag the disc, a tap opens the settings
 	// menu. Radii in CSS px; keys span r0..r1, split at rm.
 	// Sizes are 1.1x the 0.19 disc (Rino asked for 10% larger).
-	private static HUB = { R: 123, core: 33, r0: 38.5, r1: 89, slideR: 107, slideSpan: 116 };
+	private static HUB = { R: 123, core: 33, r0: 38.5, r1: 89, slideR: 107 };
 	// Keys: path, icon, centre angle (deg, screen coords: 0 = right, 90 = down; mirrored in left-hand mode), radii.
 	private hubKeys: { path: Element; ic: HTMLElement | null; mid: number; span: number }[] = [];
 	private hubSeps: [Element, number][] = []; // group separator lines and their angle (right-hand frame)
@@ -291,7 +339,7 @@ export class PenCanvasView extends TextFileView {
 	private coreText!: HTMLElement;
 	private static get TOOLS(): [Tool, string, string][] {
 		return [
-			['pen', 'pencil', tr('笔', 'Pen')], ['eraser', 'eraser', tr('橡皮（整笔擦除）', 'Eraser (removes whole strokes)')],
+			['pen', 'pencil', tr('笔', 'Pen')], ['eraser', 'eraser', tr('橡皮（整笔擦除；有选中内容时点它直接删除选中）', 'Eraser (removes whole strokes; with a selection, tap to delete it)')],
 			['select', 'mouse-pointer-2', tr('框选 / 移动', 'Select / move')], ['fill', 'paint-bucket', tr('填充（点封闭区域）', 'Fill (tap a closed area)')],
 			['hand', 'move', tr('平移', 'Pan')], ['rect', 'square', tr('矩形', 'Rectangle')], ['ellipse', 'circle', tr('椭圆', 'Ellipse')],
 			['line', 'minus', tr('直线', 'Line')], ['arrow', 'move-up-right', tr('箭头', 'Arrow')],
@@ -312,13 +360,13 @@ export class PenCanvasView extends TextFileView {
 		this.coreIcon = core.createSpan({ cls: 'pc-core-icon' });
 		this.coreText = core.createSpan({ cls: 'pc-core-text' });
 		// Core: hand (pan) tool, tap again for the previous tool; closes the shape drawer when it is open.
-		core.addEventListener('click', () => {
+		this.onTap(core, () => {
 			if (this.drawerOpen) { this.setDrawer(false); return; }
 			this.setTool(this.tool === 'hand' ? this.backTool : 'hand');
 		});
 
 		// Keys are SVG sectors (largest possible tap area); their icons are HTML spans on top that ignore pointers.
-		// Ten keys of 36 deg. Work zone (216 deg, colour at the top, rectangle at the bottom): colour, pen, select, eraser, fill, rectangle. Helper zone (144 deg, centred on the left): one group of
+		// Ten keys of 36 deg. Colour key on its own at the top; work zone (180 deg, pen to shape at the bottom): pen, select, eraser, fill, shape. Helper zone (144 deg, centred on the left): one group of
 		// four equal 36 deg wedges, top to bottom undo, redo, copy, paste. Keys within a group are split by a thin
 		// line; the groups (work, undo/redo, copy/paste) by a white one.
 		const keys = createSvg('svg');
@@ -327,7 +375,7 @@ export class PenCanvasView extends TextFileView {
 		hub.appendChild(keys);
 		// One tinted background per group (work, undo/redo, copy/paste) so keys inside a group show no seams;
 		// the keys themselves are transparent until hovered or active.
-		for (const [cls, mid, span] of [['pc-key-work', 0, 216], ['pc-key-aux', 216, 72], ['pc-key-aux', 144, 72]] as [string, number, number][]) {
+		for (const [cls, mid, span] of [['pc-key-work', 18, 180], ['pc-key-aux', 216, 72], ['pc-key-aux', 144, 72]] as [string, number, number][]) {
 			const bgp = createSvg('path');
 			bgp.setAttribute('class', `pc-key-bg ${cls}`);
 			keys.appendChild(bgp);
@@ -341,7 +389,7 @@ export class PenCanvasView extends TextFileView {
 			const title = createSvg('title');
 			title.textContent = label;
 			path.appendChild(title);
-			path.addEventListener('click', fn);
+			this.onTap(path, fn);
 			keys.appendChild(path);
 			const ic = hub.createSpan({ cls: 'pc-key-icon' });
 			if (icon) setIcon(ic, icon);
@@ -350,18 +398,24 @@ export class PenCanvasView extends TextFileView {
 			return { path, ic };
 		};
 		const main: { path: Element; ic: HTMLElement }[] = [];
+		// Colour key: a group of its own; the current colour fills the whole key, border included (drawn under the tap path).
+		this.brushSwatch = createSvg('path');
+		this.brushSwatch.classList.add('pc-key-swatch');
+		keys.appendChild(this.brushSwatch);
 		const brush = key('pc-key-work', tr('颜色 / 透明度', 'Color / opacity'), -90, 36, () => this.togglePopover('colors'));
-		main.push(brush);
 		this.brushKey = brush.path;
 		this.brushBtn = brush.ic;
 		this.brushBtn.addClass('pc-brush');
-		this.brushBtn.createSpan({ cls: 'pc-dot' });
 		// Work zone, clockwise from the colour key: pen, select, eraser, fill, shape (36 deg each). Select and
 		// eraser go back to the previous tool when tapped again; fill opens its style panel.
 		for (const [t, mid] of [['pen', -54], ['select', -18], ['eraser', 18], ['fill', 54]] as [Tool, number][]) {
 			const ti = PenCanvasView.TOOLS.find(([x]) => x === t) as [Tool, string, string];
 			const back = PenCanvasView.TOGGLE_TOOLS.includes(t);
-			const fn = t === 'fill' ? () => this.fillStyleMenu() : back ? () => this.setTool(this.tool === t ? this.backTool : t) : () => this.setTool(t);
+			const toggle = () => this.setTool(this.tool === t ? this.backTool : t);
+			// Eraser with something selected: delete the selection instead of switching tools.
+			const fn = t === 'fill' ? () => this.fillStyleMenu()
+				: t === 'eraser' ? () => { if (this.selected.size) this.deleteSelected(); else toggle(); }
+				: back ? toggle : () => this.setTool(t);
 			const k = key('pc-key-work', back ? ti[2] + tr('（再点一次回到上一个工具）', ' (tap again for the previous tool)') : ti[2], mid, 36, fn, ti[1]);
 			main.push(k);
 			this.quickBtns.set(t, k.path);
@@ -378,9 +432,9 @@ export class PenCanvasView extends TextFileView {
 		this.shapeKey = shape.path;
 		for (const k of main) { k.path.classList.add('pc-key-main'); k.ic.addClass('pc-key-main-ic'); }
 		const rest = PenCanvasView.SHAPES.map((x) => PenCanvasView.TOOLS.find(([t]) => t === x) as [Tool, string, string]);
-		const step = 216 / rest.length;
+		const step = 180 / rest.length; // the drawer covers the work group (pen to shape); the colour key stays
 		rest.forEach(([t, icon, label], i) => {
-			const k = key('pc-key-work', label, -108 + step * (i + 0.5), step, () => { this.setTool(t); this.setDrawer(false); }, icon);
+			const k = key('pc-key-work', label, -72 + step * (i + 0.5), step, () => { this.setTool(t); this.setDrawer(false); }, icon);
 			k.path.classList.add('pc-key-drawer');
 			k.ic.addClass('pc-key-drawer-ic');
 			this.drawerBtns.set(t, k.path);
@@ -389,8 +443,8 @@ export class PenCanvasView extends TextFileView {
 		key('pc-key-aux', tr('重做', 'Redo'), 198, 36, () => this.redo(), 'redo-2');
 		key('pc-key-aux', tr('复制所选 (Ctrl+C)', 'Copy selection (Ctrl+C)'), 162, 36, () => this.copySelected(), 'copy');
 		key('pc-key-aux', tr('粘贴 (Ctrl+V)', 'Paste (Ctrl+V)'), 126, 36, () => this.paste(), 'clipboard-paste');
-		// Groups (work | undo, redo | copy, paste) are split by a gap in the disc colour; keys inside a group are not.
-		for (const a of [108, 180, 252]) {
+		// Groups (colour | work | undo, redo | copy, paste) are split by a gap in the disc colour; keys inside a group are not.
+		for (const a of [-72, 108, 180, 252]) {
 			const line = createSvg('path');
 			line.setAttribute('class', 'pc-key-sep');
 			keys.appendChild(line);
@@ -406,26 +460,29 @@ export class PenCanvasView extends TextFileView {
 			return { r: Math.hypot(dx, dy) * ((2 * H.R) / b.width), deg: (Math.atan2(dy, dx) * 180) / Math.PI };
 		};
 		const slide = (e: PointerEvent) => {
-			const { deg } = polar(e);
-			const lo = 90 + (180 - H.slideSpan) / 2; // bottom end of the left arc
-			let t: number;
-			if (mode === 'size') t = (((deg + 360) % 360) - lo) / H.slideSpan;
-			else t = (90 - (180 - H.slideSpan) / 2 - deg) / H.slideSpan;
-			t = Math.max(0, Math.min(1, t));
-			if (mode === 'size') this.setSize(Math.round(1 + t * 29), false);
+			const d = this.sliderFrame(polar(e).deg);
+			const [a0, a1] = PenCanvasView.SLIDERS[mode === 'size' ? 'size' : 'op'];
+			const t = Math.max(0, Math.min(1, (d - a0) / (a1 - a0)));
+			if (mode === 'size') this.setSizeT(t, false);
 			else this.setOpacity(Math.round(5 + t * 95), false);
 		};
 		const svg = this.hubSvg;
 		svg.addEventListener('pointerdown', (e) => {
+			this.hubLog(e);
 			const { r, deg } = polar(e);
 			if (r > H.R + 2) return;
 			try { svg.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
 			e.preventDefault();
-			const gap = (180 - H.slideSpan) / 2; // free angle at the top and bottom of the outer ring = grips
 			const ring = r >= H.slideR - 14;
-			if (ring && Math.abs(Math.abs(deg) - 90) > gap) { mode = Math.abs(deg) > 90 ? 'size' : 'op'; slide(e); return; }
+			const d = this.sliderFrame(deg);
+			if (ring && Math.abs(d) < PenCanvasView.WORK) { // work-zone side of the ring: the sliders
+				if (this.slidersOff()) { mode = null; return; }
+				mode = d < 0 ? 'size' : 'op'; slide(e); return;
+			}
+			// The rest of the ring (grips, helper side) drags the disc; only a tap on the bottom grip opens settings.
 			mode = 'drag';
-			grip = ring && deg > 0; moved = false; // only the bottom grip opens settings on tap; both drag the disc
+			const [b0, b1] = PenCanvasView.GRIPS.bottom;
+			grip = ring && d >= b0 && d <= b1; moved = false;
 			down = [e.clientX, e.clientY];
 			grab = [e.clientX - hub.offsetLeft, e.clientY - hub.offsetTop];
 		});
@@ -438,10 +495,11 @@ export class PenCanvasView extends TextFileView {
 			}
 			if (mode) slide(e);
 		});
-		const end = () => {
+		const end = (e: PointerEvent) => {
+			this.hubLog(e);
 			const was = mode;
 			mode = null;
-			if (was === 'size') this.setSize(this.size, true);
+			if (was === 'size') this.setSizeT(this.sizeT(), true);
 			else if (was === 'op') this.setOpacity(Math.round(this.opacity * 100), true);
 			else if (was === 'drag' && moved) this.moveHub(hub.offsetLeft, hub.offsetTop, true);
 			else if (was === 'drag' && grip) this.togglePopover('more');
@@ -495,6 +553,19 @@ export class PenCanvasView extends TextFileView {
 		return [...arc(H.r1, a0, a0 + span), ...arc(H.r0, a0 + span, a0)];
 	}
 
+	/** A key's sector inset by g px (sides by gs px; corners rounded with radius about k, 0 = sharp), as an SVG path. */
+	private static swatchPath(mid: number, span: number, g = 3, k = 6, gs = g): string {
+		const H = PenCanvasView.HUB, D = 180 / Math.PI, ro = H.r1 - g, ri = H.r0 + g, a0 = mid - span / 2, a1 = mid + span / 2;
+		const P = (deg: number, r: number): [number, number] => [H.R + r * Math.cos(deg / D), H.R + r * Math.sin(deg / D)];
+		const oa0 = a0 + Math.asin(gs / ro) * D, oa1 = a1 - Math.asin(gs / ro) * D, ia0 = a0 + Math.asin(gs / ri) * D, ia1 = a1 - Math.asin(gs / ri) * D;
+		const kO = (k / ro) * D, kI = (k / ri) * D;
+		const O0 = P(oa0, ro), O1 = P(oa1, ro), I0 = P(ia0, ri), I1 = P(ia1, ri);
+		const toward = (a: [number, number], b: [number, number], d: number) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]); return [a[0] + ((b[0] - a[0]) * d) / l, a[1] + ((b[1] - a[1]) * d) / l]; };
+		const f = (q: number[]) => `${q[0].toFixed(2)} ${q[1].toFixed(2)}`;
+		return `M ${f(P(oa0 + kO, ro))} A ${ro} ${ro} 0 0 1 ${f(P(oa1 - kO, ro))} Q ${f(O1)} ${f(toward(O1, I1, k))} L ${f(toward(I1, O1, k))}`
+			+ ` Q ${f(I1)} ${f(P(ia1 - kI, ri))} A ${ri} ${ri} 0 0 0 ${f(P(ia0 + kI, ri))} Q ${f(I0)} ${f(toward(I0, O0, k))} L ${f(toward(O0, I0, k))} Q ${f(O0)} ${f(P(oa0 + kO, ro))} Z`;
+	}
+
 	/** Key shapes and icon positions; the inner ring is mirrored left-right in left-hand mode. */
 	private layoutHub(): void {
 		const H = PenCanvasView.HUB, left = this.plugin.settings.leftHand;
@@ -513,6 +584,7 @@ export class PenCanvasView extends TextFileView {
 		}
 
 
+		this.brushSwatch?.setAttribute('d', PenCanvasView.swatchPath(-90, 36, 2, 0, 5)); // top key: symmetric, no mirroring; inset by half the 4px border, sides 3px more (wider gap to the zones)
 		const core = this.coreIcon.parentElement as HTMLElement;
 		core.style.left = core.style.top = `${H.R}px`;
 		this.placeHub();
@@ -520,33 +592,25 @@ export class PenCanvasView extends TextFileView {
 	}
 
 	/**
-	 * The "···" grip band at angle d (-90 top, 90 bottom): an annular band across the gap between the two
-	 * sliders whose ends are concave, hugging the sliders' round caps, with softly rounded corners. Built as the
-	 * band shrunk by K, then drawn with a K-wide round-join stroke, which rounds the four corners.
+	 * Both sliders sit on the outer ring beside the work zone (Rino: the helper side invites mis-touches):
+	 * size on the upper half (grows downwards), opacity on the lower half (grows upwards). They fill the work side
+	 * from just inside the grips to a gap in the middle. Angles are in the right-hand frame (0 = right, 90 = down)
+	 * as [value 0, value 1]; left-hand mode mirrors them with the keys.
 	 */
-	private gripPath(d: number, gapA: number): string {
-		const H = PenCanvasView.HUB, s = H.slideR, K = 4, HALF = 9.5, CAP = 6.5, GAP = 10;
-		const rIn = s - HALF + K, rOut = s + HALF - K, rho = CAP + GAP + K;
-		const P = (a: number, r: number) => [H.R + r * Math.cos((a * Math.PI) / 180), H.R + r * Math.sin((a * Math.PI) / 180)];
-		// Angle (from the centre) where a circle of radius r meets the circle of radius rho around a cap at angle e.
-		const phi = (r: number) => (Math.acos((r * r + s * s - rho * rho) / (2 * r * s)) * 180) / Math.PI;
-		const eA = d - gapA, eB = d + gapA; // slider ends on either side of the grip
-		const aOutA = eA + phi(rOut), aOutB = eB - phi(rOut), aInA = eA + phi(rIn), aInB = eB - phi(rIn);
-		const pts: number[][] = [];
-		const N = 16;
-		for (let i = 0; i <= N; i++) pts.push(P(aOutA + ((aOutB - aOutA) * i) / N, rOut));
-		// Concave end around cap B, from the outer to the inner meeting point (short way, facing the band).
-		const capArc = (e: number, from: number[], to: number[]) => {
-			const [cx, cy] = P(e, s);
-			const t0 = Math.atan2(from[1] - cy, from[0] - cx);
-			let t1 = Math.atan2(to[1] - cy, to[0] - cx);
-			if (t1 - t0 > Math.PI) t1 -= 2 * Math.PI; else if (t0 - t1 > Math.PI) t1 += 2 * Math.PI;
-			for (let i = 1; i < N; i++) { const t = t0 + ((t1 - t0) * i) / N; pts.push([cx + rho * Math.cos(t), cy + rho * Math.sin(t)]); }
-		};
-		capArc(eB, P(aOutB, rOut), P(aInB, rIn));
-		for (let i = 0; i <= N; i++) pts.push(P(aInB + ((aInA - aInB) * i) / N, rIn));
-		capArc(eA, P(aInA, rIn), P(aOutA, rOut));
-		return 'M ' + pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join(' L ') + ' Z';
+	private static SLIDERS = { size: [-97, -8], op: [97, 8] } as const;
+	/** Edge of the helper zone in the right-hand frame: |angle| < WORK is the work side of the outer ring. */
+	private static WORK = 108;
+	private static ringTextSeq = 0;
+	/**
+	 * Grips on the helper side of the outer ring, one key wide, flush with the helper zone's top and bottom
+	 * edges (right-hand frame; the helper zone spans 108-252 deg). Top: drag handle. Bottom: settings ("···").
+	 */
+	private static GRIPS = { top: [216, 252], bottom: [108, 144] } as const;
+	private sliderAngle(a: number): number { return this.plugin.settings.leftHand ? 180 - a : a; }
+	/** Screen angle (deg) -> angle in the right-hand frame, in (-180, 180]. */
+	private sliderFrame(deg: number): number {
+		const d = this.plugin.settings.leftHand ? 180 - deg : deg;
+		return ((d + 540) % 360) - 180;
 	}
 
 	private drawHubDisk(): void {
@@ -561,25 +625,42 @@ export class PenCanvasView extends TextFileView {
 			const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
 			return `M ${x0} ${y0} A ${r} ${r} 0 0 ${a1 > a0 ? 1 : 0} ${x1} ${y1}`;
 		};
-		const span = H.slideSpan, lo = 90 + (180 - span) / 2, ro = 90 - (180 - span) / 2;
-		const gapA = (180 - span) / 2; // half-width of the grip gaps at the top and bottom
-		const ts = (this.size - 1) / 29, to = (this.opacity * 100 - 5) / 95;
-		const sA = lo + ts * span, oA = ro - to * span;
+		const S = PenCanvasView.SLIDERS, A = (a: number) => this.sliderAngle(a);
+		const at = (ends: readonly [number, number], t: number) => A(ends[0] + (ends[1] - ends[0]) * t);
+		const sA = at(S.size, this.sizeT()), oA = at(S.op, (this.opacity * 100 - 5) / 95);
 		const [hx1, hy1] = pt(sA), [hx2, hy2] = pt(oA);
 		svg.empty();
+		const off = this.slidersOff();
+		this.slidersDrawnOff = off;
 		const el = <K extends keyof SVGElementTagNameMap>(tag: K, cls: string, attr: Record<string, string | number>, parent: Element = svg) => createSvg(tag, { cls, attr, parent });
 		el('circle', 'pc-disk', { cx: c, cy: c, r: R - 1 });
 		el('circle', 'pc-disk-sep', { cx: c, cy: c, r: H.slideR - 15 });
 		const gg = el('g', 'pc-grip-g', {});
-		for (const d of [-90, 90]) el('path', 'pc-grip-band', { d: this.gripPath(d, gapA) }, gg);
-		el('path', 'pc-slide-track', { d: arc(lo, lo + span) }); el('path', 'pc-slide-track', { d: arc(ro, ro - span) });
-		el('path', 'pc-slide-fill', { d: arc(lo, sA) }); el('path', 'pc-slide-fill', { d: arc(ro, oA) });
-		el('circle', 'pc-slide-handle', { cx: hx1, cy: hy1, r: 10 }); el('circle', 'pc-slide-handle', { cx: hx2, cy: hy2, r: 10 });
-		// Grips: a band across the free top and bottom of the outer ring (the whole band is the hit area) with dots.
-		// Top: drag handle, a 3 x 2 dot grid along the band. Bottom: "···" for the settings menu.
-		for (const o of [-5, 0, 5]) for (const dr of [-3.5, 3.5]) { const [x, y] = pt(-90 + o, H.slideR + dr); el('circle', 'pc-grip', { cx: x, cy: y, r: 1.8 }); }
-		for (const o of [-8, 0, 8]) { const [x, y] = pt(90 + o); el('circle', 'pc-grip', { cx: x, cy: y, r: 3 }); }
-		this.coreText?.setText(`${this.size}px · ${Math.round(this.opacity * 100)}%`);
+		// Grips: rounded rectangles bent along the ring, ends flush with the helper zone's edges.
+		const band = (g0: number, g1: number) => {
+			const a0 = Math.min(g0, g1), a1 = Math.max(g0, g1), ri = r - 8.5, ro = r + 8.5, k = 4;
+			const dO = (k / ro) * (180 / Math.PI), dI = (k / ri) * (180 / Math.PI), P = (a: number, rad: number) => pt(a, rad).join(' ');
+			return `M ${P(a0 + dO, ro)} A ${ro} ${ro} 0 0 1 ${P(a1 - dO, ro)} Q ${P(a1, ro)} ${P(a1, ro - k)} L ${P(a1, ri + k)} Q ${P(a1, ri)} ${P(a1 - dI, ri)}`
+				+ ` A ${ri} ${ri} 0 0 0 ${P(a0 + dI, ri)} Q ${P(a0, ri)} ${P(a0, ri + k)} L ${P(a0, ro - k)} Q ${P(a0, ro)} ${P(a0 + dO, ro)} Z`;
+		};
+		for (const [g0, g1] of [PenCanvasView.GRIPS.top, PenCanvasView.GRIPS.bottom]) el('path', 'pc-grip-band', { d: band(A(g0), A(g1)) }, gg);
+		// "Pen Canvas" around the helper side of the ring, between the grips, like the lettering on a badge.
+		const tc = A(180), tId = `pc-ring-text-${++PenCanvasView.ringTextSeq}`, tr = r;
+		const [tx0, ty0] = pt(tc - 34, tr), [tx1, ty1] = pt(tc + 34, tr);
+		el('path', 'pc-ring-text-path', { id: tId, d: `M ${tx0} ${ty0} A ${tr} ${tr} 0 0 1 ${tx1} ${ty1}` });
+		const label = el('text', 'pc-ring-text', {});
+		const tp = el('textPath', 'pc-ring-text-tp', { href: `#${tId}`, startOffset: '50%' }, label);
+		tp.textContent = 'Pen Canvas';
+		const sl = el('g', 'pc-sliders', {});
+		if (off) sl.classList.add('is-off'); // createSvg's cls string must be a single class (classList.add)
+		el('path', 'pc-slide-track', { d: arc(A(S.size[0]), A(S.size[1])) }, sl); el('path', 'pc-slide-track', { d: arc(A(S.op[0]), A(S.op[1])) }, sl);
+		el('path', 'pc-slide-fill', { d: arc(A(S.size[0]), sA) }, sl); el('path', 'pc-slide-fill', { d: arc(A(S.op[0]), oA) }, sl);
+		el('circle', 'pc-slide-handle', { cx: hx1, cy: hy1, r: 10 }, sl); el('circle', 'pc-slide-handle', { cx: hx2, cy: hy2, r: 10 }, sl);
+		// Grip dots. Top: drag handle, a 3 x 2 dot grid along the band. Bottom: "···" for the settings menu.
+		const mid = (g: readonly [number, number]) => (g[0] + g[1]) / 2;
+		for (const o of [-5, 0, 5]) for (const dr of [-3.5, 3.5]) { const [x, y] = pt(A(mid(PenCanvasView.GRIPS.top) + o), H.slideR + dr); el('circle', 'pc-grip', { cx: x, cy: y, r: 1.8 }); }
+		for (const o of [-8, 0, 8]) { const [x, y] = pt(A(mid(PenCanvasView.GRIPS.bottom) + o)); el('circle', 'pc-grip', { cx: x, cy: y, r: 3 }); }
+		this.coreText?.setText(this.tool === 'eraser' ? `${this.eraserSize()}px` : `${this.size}px · ${Math.round(this.opacity * 100)}%`);
 	}
 
 	/** Popovers open beside the disc (below it when there is room, else above). */
@@ -624,11 +705,25 @@ export class PenCanvasView extends TextFileView {
 		}
 		const side = p.createDiv({ cls: 'pc-fill-density' });
 		side.createSpan({ text: tr('密度', 'Density') });
-		this.densityRange = side.createEl('input', { attr: { type: 'range', min: '10', max: '100', step: '10' } });
+		// Our own slider: a native range input does not move with the S Pen in Obsidian mobile.
+		const range = side.createDiv({ cls: 'pc-range', attr: { role: 'slider', tabindex: '0', 'aria-label': tr('密度', 'Density'), 'aria-valuemin': '10', 'aria-valuemax': '100' } });
+		range.createDiv({ cls: 'pc-range-fill' });
+		range.createDiv({ cls: 'pc-range-thumb' });
+		this.densityRange = range;
 		this.densityLabel = side.createSpan({ cls: 'pc-fill-density-val' });
-		this.densityRange.addEventListener('input', () => { this.fillDensity = Number(this.densityRange.value); this.refreshFillPanel(); });
-		this.densityRange.addEventListener('change', () => {
-			if (this.selected.size) this.mutateSelected((it) => (it.fill ? this.withFillStyle({ ...it }) : it));
+		const commit = () => { if (this.selected.size) this.mutateSelected((it) => (it.fill ? this.withFillStyle({ ...it }) : it)); };
+		const setD = (v: number) => {
+			v = Math.max(10, Math.min(100, Math.round(v / 10) * 10));
+			if (v !== this.fillDensity) { this.fillDensity = v; this.refreshFillPanel(); }
+		};
+		dragArea(range, (fx) => setD(10 + fx * 90), commit);
+		range.addEventListener('keydown', (e) => {
+			if (range.hasClass('is-disabled')) return;
+			const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 10 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -10 : 0;
+			if (!d) return;
+			e.preventDefault();
+			setD(this.fillDensity + d);
+			commit();
 		});
 		// Close when drawing or tapping elsewhere.
 		this.registerDomEvent(activeDocument, 'pointerdown', (e) => {
@@ -653,9 +748,12 @@ export class PenCanvasView extends TextFileView {
 			const mono = activeDocument.body.classList.contains('theme-dark') ? '#ffffff' : '#000000';
 			drawFillIcon(c, st, mono);
 		}
-		this.densityRange.disabled = solid;
+		const dv = solid ? 100 : this.fillDensity;
+		this.densityRange.toggleClass('is-disabled', solid);
 		this.densityRange.parentElement?.toggleClass('is-disabled', solid);
-		this.densityRange.value = String(solid ? 100 : this.fillDensity);
+		this.densityRange.setAttribute('aria-valuenow', String(dv));
+		this.densityRange.setAttribute('aria-disabled', String(solid));
+		this.densityRange.style.setProperty('--pc-t', String((dv - 10) / 90));
 		this.densityLabel.setText(`${solid ? 100 : this.fillDensity}%`);
 	}
 
@@ -695,16 +793,35 @@ export class PenCanvasView extends TextFileView {
 
 	// ---------- popovers (fill styles, background, brush ring) ----------
 
+	/** Opens the custom colour picker beside the disc; a tap outside it counts as Done. */
+	private openPicker(opts: PickerOptions): void {
+		if (!this.picker) {
+			const pk = new ColorPicker(this.contentEl);
+			this.picker = pk;
+			this.shield(pk.el);
+			this.registerDomEvent(activeDocument, 'pointerdown', (e) => {
+				if (pk.isOpen() && !pk.el.contains(e.target as Node)) pk.close(true);
+			}, true);
+		}
+		this.closeFillPanel();
+		this.picker.open(opts);
+		this.placeAboveHub(this.picker.el);
+	}
+
 	private togglePopover(name: 'more' | 'tools' | 'colors'): void {
+		this.picker?.close(true);
 		if (!this.popovers.has(name)) this.buildPopover(name);
 		const p = this.popovers.get(name);
 		if (!p) return;
 		const open = !p.el.hasClass('is-hidden');
 		for (const q of this.popovers.values()) q.el.addClass('is-hidden');
 		this.closeFillPanel();
+		this.hubNote(`${name} ${open ? 'close' : 'open'}`);
 		if (open) return;
 		this.placePopover(p.el, p.anchor());
 		p.refresh();
+		const b = p.el.getBoundingClientRect();
+		this.hubNote(`${name} at ${Math.round(b.left)},${Math.round(b.top)} ${Math.round(b.width)}x${Math.round(b.height)} hidden=${p.el.hasClass('is-hidden')}`);
 	}
 
 	private placePopover(el: HTMLElement, _anchor: Element): void {
@@ -739,9 +856,14 @@ export class PenCanvasView extends TextFileView {
 			// Custom colour: a swatch like the others that opens a hidden native picker (the native input itself
 			// cannot be sized reliably on mobile).
 			const customBtn = bg.createEl('button', { cls: 'pc-bg-swatch pc-bg-custom-btn', attr: { 'aria-label': tr('自定义背景色', 'Custom background color') } });
-			const custom = el.createEl('input', { cls: 'pc-fan-custom', attr: { type: 'color', tabindex: '-1' } });
-			customBtn.addEventListener('click', () => custom.click());
-			custom.addEventListener('input', () => { this.setBackground(custom.value); refresh(); });
+			customBtn.addEventListener('click', () => {
+				el.addClass('is-hidden');
+				this.openPicker({
+					value: this.doc.background,
+					onInput: (c) => { this.doc.background = c; this.applyBackground(); }, // preview only
+					onDone: (c) => { this.setBackground(c); refresh(); },
+				});
+			});
 			const acts = el.createDiv({ cls: 'pc-more-acts' });
 			const act = (icon: string, text: string, fn: () => void) => {
 				const b = acts.createEl('button', { cls: 'pc-more-act' });
@@ -758,7 +880,6 @@ export class PenCanvasView extends TextFileView {
 				const isCustom = !swatches.some((sw) => sw.dataset.color === this.doc.background);
 				customBtn.toggleClass('is-active', isCustom);
 				customBtn.style.setProperty('--pc-c', isCustom ? this.doc.background : 'transparent');
-				custom.value = /^#[0-9a-fA-F]{6}$/.test(this.doc.background) ? this.doc.background : '#ffffff';
 			};
 		} else if (name === 'tools') {
 			const grid = el.createDiv({ cls: 'pc-tool-grid' });
@@ -795,30 +916,24 @@ export class PenCanvasView extends TextFileView {
 					l.el.setAttribute('transform', `rotate(${rt.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})`);
 				}
 			};
-			const custom = el.createEl('input', { cls: 'pc-fan-custom', attr: { type: 'color', 'aria-label': tr('自定义颜色', 'Custom color') } });
-			// Remember the final custom pick. 'change' is not reliable on every mobile picker, so an idle
-			// timer after the last 'input' also records it.
-			let recentTimer = 0;
-			const remember = () => {
-				window.clearTimeout(recentTimer);
-				const st = this.plugin.settings, c = custom.value.toLowerCase();
-				if (!FAN_COLUMNS.some((col) => col.includes(c)) && st.recentColors?.[0] !== c) {
-					st.recentColors = [c, ...(st.recentColors ?? []).filter((x) => x !== c)].slice(0, 3);
-					void this.plugin.saveSettings();
-				}
-				refresh();
+			// Custom colour: our own picker (the native one is a short preset list on Android). The final pick is
+			// applied (recolouring a selection once) and remembered in the fan's custom column.
+			const openCustom = () => {
+				el.addClass('is-hidden');
+				this.openPicker({
+					value: this.color,
+					onInput: (c) => { this.color = c; this.refreshToolbar(); }, // preview only
+					onDone: (c) => {
+						this.pickColor(c);
+						const st = this.plugin.settings;
+						if (!FAN_COLUMNS.some((col) => col.includes(c)) && st.recentColors?.[0] !== c) {
+							st.recentColors = [c, ...(st.recentColors ?? []).filter((x) => x !== c)].slice(0, 3);
+							void this.plugin.saveSettings();
+						}
+					},
+				});
 			};
-			custom.addEventListener('input', () => {
-				this.pickColor(custom.value);
-				refresh();
-				window.clearTimeout(recentTimer);
-				recentTimer = window.setTimeout(remember, 1200);
-			});
-			custom.addEventListener('change', remember);
-			const row = el.createDiv({ cls: 'pc-ring-op pc-fan-op' });
-			row.createSpan({ text: tr('透明度', 'Opacity') });
-			row.appendChild(this.opNum);
-			row.createSpan({ text: '%' });
+			// No opacity box beside the fan: the disc's right slider sets opacity (Rino, 2026-11-19).
 			const STEP = 15, WIN = 210, ROWS = 4, R0 = PenCanvasView.HUB.R + 8, RH = 30, F = R0 + ROWS * RH + 60, EDGE = 14;
 			let built = 0; // fanOff the cells were built for
 			let spin = 0; // rAF id of the momentum animation
@@ -862,7 +977,7 @@ export class PenCanvasView extends TextFileView {
 				drag = null;
 				if (!d) return;
 				if (!d.moved) {
-					if (d.target === 'custom') custom.click();
+					if (d.target === 'custom') openCustom();
 					else if (d.target) { this.pickColor(d.target); refresh(); }
 					return;
 				}
@@ -921,7 +1036,7 @@ export class PenCanvasView extends TextFileView {
 						const r0 = R0 + j * RH, r1 = r0 + RH;
 						const d = `M ${pt(r0, a0)} A ${r0} ${r0} 0 0 1 ${pt(r0, a1)} L ${pt(r1, a1)} A ${r1} ${r1} 0 0 0 ${pt(r1, a0)} Z`;
 						// Free slot for a custom colour: not pickable, but it still turns the fan (drag, wheel).
-						if (!c) { createSvg('path', { cls: off ? 'pc-wedge-empty is-off' : 'pc-wedge-empty', attr: { d }, parent: rot }); continue; }
+						if (!c) { createSvg('path', { cls: off ? ['pc-wedge-empty', 'is-off'] : 'pc-wedge-empty', attr: { d }, parent: rot }); continue; }
 						const isCustom = c === 'custom';
 						const on = c === this.color;
 						// Cells touch: the stroke is the cell's own colour, which also hides seams between them.
@@ -948,23 +1063,33 @@ export class PenCanvasView extends TextFileView {
 				for (const cell of activeCells) rot.appendChild(cell); // the selected cell after the others so its outline is on top
 				placeLabels(0);
 				built = this.fanOff;
-				const a = (this.fanDir * Math.PI) / 180;
-				// push the row out until its nearest edge clears the fan (row is centred on its point)
-				const ext = (Math.abs(Math.cos(a)) * (row.offsetWidth || 160) + Math.abs(Math.sin(a)) * (row.offsetHeight || 40)) / 2;
-				const rr = R0 + ROWS * RH + 10 + ext;
-				row.style.left = `${F + rr * Math.cos(a)}px`;
-				row.style.top = `${F + rr * Math.sin(a)}px`;
-				custom.value = /^#[0-9a-fA-F]{6}$/.test(this.color) ? this.color : '#000000';
 			};
 		}
 		this.popovers.set(name, { el, anchor, refresh });
 		this.registerDomEvent(activeDocument, 'pointerdown', (e) => {
 			const t = e.target as Node;
-			if (!el.contains(t) && !anchor().contains(t)) el.addClass('is-hidden');
+			if (!el.contains(t) && !anchor().contains(t) && !el.hasClass('is-hidden')) {
+				el.addClass('is-hidden');
+				this.hubNote(`${name} closed by ${e.type}:${e.pointerType} on ${((t as Element).getAttribute?.('class') ?? t.nodeName).split(' ')[0]}`);
+			}
 		}, true);
 	}
 
 
+
+	private eraserSize(): number { return this.plugin.settings.eraserSize; }
+
+	/** Position of the size slider (0..1): pen width 1-30 px, or eraser diameter 6-100 px while erasing. */
+	private sizeT(): number {
+		return this.tool === 'eraser' ? (this.eraserSize() - 6) / 94 : (this.size - 1) / 29;
+	}
+
+	private setSizeT(t: number, commit: boolean): void {
+		if (this.tool !== 'eraser') { this.setSize(Math.round(1 + t * 29), commit); return; }
+		this.plugin.settings.eraserSize = Math.round(6 + t * 94);
+		if (commit) void this.plugin.saveSettings();
+		this.refreshToolbar();
+	}
 
 	private setSize(px: number, commit: boolean): void {
 		this.size = Math.max(1, Math.min(30, px));
@@ -1035,12 +1160,9 @@ export class PenCanvasView extends TextFileView {
 			}
 		}
 		this.toolbarEl?.toggleClass('is-hand', this.tool === 'hand');
+		this.toolbarEl?.toggleClass('is-select', this.tool === 'select');
 		for (const b of this.colorBtns) b.toggleClass('is-active', b.dataset.color === this.color);
-		if (this.brushBtn) {
-			const dot = this.brushBtn.querySelector('.pc-dot') as HTMLElement;
-			dot.style.setProperty('--pc-d', `${Math.max(4, Math.min(22, this.size * 1.2))}px`);
-			dot.style.setProperty('--pc-ink', this.ink);
-		}
+		this.brushSwatch?.style.setProperty('--pc-ink', this.ink);
 		const ti = PenCanvasView.TOOLS.find(([t]) => t === this.tool);
 		if (this.coreIcon && ti && this.coreIcon.dataset.icon !== ti[1]) { this.coreIcon.empty(); setIcon(this.coreIcon, ti[1]); this.coreIcon.dataset.icon = ti[1]; }
 		this.drawRingIfOpen();
@@ -1103,7 +1225,12 @@ export class PenCanvasView extends TextFileView {
 	private scheduleRender(): void {
 		if (this.viewTimer) { window.clearTimeout(this.viewTimer); this.viewTimer = 0; }
 		if (!this.raf) this.raf = window.requestAnimationFrame(() => { this.raf = 0; this.renderBase(); });
+		if (this.slidersOff() !== this.slidersDrawnOff) this.drawHubDisk(); // selection changed while selecting
 	}
+
+	/** Select tool with nothing selected: the size / opacity sliders would change nothing, so they are dimmed and ignore input. */
+	private slidersOff(): boolean { return this.tool === 'select' && this.selected.size === 0; }
+	private slidersDrawnOff = false;
 
 	/**
 	 * Pan / zoom: when a full render is slow (many fills on screen), show the last full render
@@ -1809,30 +1936,14 @@ export class PenCanvasView extends TextFileView {
 
 	private eraseAt(x: number, y: number): void {
 		const g = this.g;
-		const r = 8 / this.scale;
+		const r = this.eraserSize() / 2 / this.scale;
 		const items = this.doc.items;
-		// Lines and fills are erased separately: touching a line removes the line but keeps its fill;
-		// rubbing inside a fill (away from lines) removes only the fill.
+		// Like a paint program's eraser, but per item: whatever the eraser circle touches (line or fill) is removed whole.
 		let next: Item[] | null = null;
-		const lineHits = items.filter((it) => hitItem(it, x, y, r, true));
-		if (lineHits.length) {
-			const hit = new Set(lineHits);
-			next = [];
-			for (const it of items) {
-				if (!hit.has(it)) { next.push(it); continue; }
-				const f = detachFill(it);
-				if (f) next.unshift(f); // keep the detached fill at the bottom
-			}
-		} else {
-			const fillHits = items.filter((it) => hitFill(it, x, y, r + it.size / 2 + 2 / this.scale));
-			if (fillHits.length) {
-				const hit = new Set(fillHits);
-				next = [];
-				for (const it of items) {
-					if (!hit.has(it)) next.push(it);
-					else if (!isFillOnly(it)) { const n = { ...it, fill: null }; delete n.fillStyle; delete n.fillDensity; next.push(n); }
-				}
-			}
+		const hits = items.filter((it) => hitItem(it, x, y, r, true) || fillTouchesCircle(it, x, y, r));
+		if (hits.length) {
+			const hit = new Set(hits);
+			next = items.filter((it) => !hit.has(it));
 		}
 		if (next && g) {
 			if (!g.snapped) { this.snapshot(); g.snapped = true; }
@@ -1892,6 +2003,8 @@ export class PenCanvasView extends TextFileView {
 			`getPredictedEvents: ${typeof proto.getPredictedEvents === 'function' ? tr('支持', 'supported') : tr('不支持', 'not supported')}`,
 			tr(`见到的输入类型：${[...this.diag.types].join(', ') || '（还没有）'}`, `Input types seen: ${[...this.diag.types].join(', ') || '(none yet)'}`),
 			tr(`上一笔：${this.diag.last || '（先画一笔再看）'}`, `Last stroke: ${this.diag.last || '(draw a stroke first)'}`),
+			tr('圆盘最近的指针事件：', 'Recent pointer events on the disc:'),
+			...(this.hubEvents.length ? this.hubEvents.map((x) => '  ' + x) : [tr('  （还没有）', '  (none yet)')]),
 			`devicePixelRatio: ${window.devicePixelRatio}`,
 			`Platform: ${['isDesktopApp', 'isMobileApp', 'isAndroidApp', 'isIosApp', 'isTablet', 'isPhone'].filter((k) => (Platform as unknown as Record<string, boolean>)[k]).join(', ')}`,
 		];

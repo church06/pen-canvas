@@ -320,6 +320,21 @@ export function hitFill(it: Item, x: number, y: number, margin = 0): boolean {
 	return true;
 }
 
+/** True when a circle (eraser) overlaps the item's filled region: centre inside it, or any edge within r. */
+export function fillTouchesCircle(it: Item, x: number, y: number, r: number): boolean {
+	if (!it.fill || it.type === 'line' || it.type === 'arrow') return false;
+	const b = getCache(it).gbox;
+	if (x < b.x0 - r || x > b.x1 + r || y < b.y0 - r || y > b.y1 + r) return false;
+	const pts = polyline(it).pts;
+	const holes = it.type === 'polygon' && it.holes ? it.holes : [];
+	if (inPoly(x, y, pts) && !holes.some((h) => inPoly(x, y, h))) return true;
+	for (const ring of [pts, ...holes]) for (let i = 0; i < ring.length; i++) {
+		const p = ring[i], q = ring[(i + 1) % ring.length];
+		if (distSeg(x, y, p[0], p[1], q[0], q[1]) <= r) return true;
+	}
+	return false;
+}
+
 /** The fill of an item as a separate outline-less region (used when its line is erased). */
 export function detachFill(it: Item): PolygonItem | null {
 	if (!it.fill || it.type === 'line' || it.type === 'arrow') return null;

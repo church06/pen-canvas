@@ -79,6 +79,7 @@ export interface PenSettings {
 	hubY: number;
 	recentColors: string[]; // last custom colours, newest first (max 3), shown in the fan's custom column
 	lastShape: ShapeKind; // shown on the hub's shape key
+	eraserSize: number; // eraser diameter in screen px (6-100)
 	lang: Lang; // interface language: auto follows Obsidian
 }
 
@@ -100,6 +101,7 @@ export const DEFAULT_SETTINGS: PenSettings = {
 	hubY: 0,
 	recentColors: [],
 	lastShape: 'rect',
+	eraserSize: 24,
 	lang: 'auto',
 };
 
